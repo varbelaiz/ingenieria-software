@@ -7,7 +7,7 @@ client = TestClient(app)
 VALID_HEADERS = {"X-API-Key": "abcdef12345"}
 
 
-def test_get_wells_returns_200_with_expected_json_structure():
+def test_get_wells_returns_200_with_expected_json_structure() -> None:
     response = client.get("/api/v1/wells", params={"date_query": "2026-04-28"}, headers=VALID_HEADERS)
 
     assert response.status_code == 200
@@ -18,14 +18,14 @@ def test_get_wells_returns_200_with_expected_json_structure():
     assert payload["wells"] == ["POZO-001", "POZO-002", "POZO-003"]
 
 
-def test_get_wells_returns_403_without_api_key():
+def test_get_wells_returns_403_without_api_key() -> None:
     response = client.get("/api/v1/wells", params={"date_query": "2026-04-28"})
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Invalid or missing API key"
 
 
-def test_get_wells_returns_403_with_invalid_api_key():
+def test_get_wells_returns_403_with_invalid_api_key() -> None:
     response = client.get(
         "/api/v1/wells",
         params={"date_query": "2026-04-28"},
@@ -36,13 +36,13 @@ def test_get_wells_returns_403_with_invalid_api_key():
     assert response.json()["detail"] == "Invalid or missing API key"
 
 
-def test_get_wells_returns_422_when_missing_date_query():
+def test_get_wells_returns_422_when_missing_date_query() -> None:
     response = client.get("/api/v1/wells", headers=VALID_HEADERS)
 
     assert response.status_code == 422
 
 
-def test_get_wells_returns_422_when_date_query_has_invalid_format():
+def test_get_wells_returns_422_when_date_query_has_invalid_format() -> None:
     response = client.get(
         "/api/v1/wells",
         params={"date_query": "28-04-2026"},

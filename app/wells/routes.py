@@ -13,7 +13,7 @@ router = APIRouter(
 
 
 @router.get("/wells")
-def get_wells(date_query: date = Query(..., description="Fecha en formato YYYY-MM-DD")):
+def get_wells(date_query: date = Query(..., description="Fecha en formato YYYY-MM-DD")) -> dict[str, object]:
     wells = ["POZO-001", "POZO-002", "POZO-003"]
     return {
         "date_query": date_query.isoformat(),

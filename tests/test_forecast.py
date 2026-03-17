@@ -7,7 +7,7 @@ client = TestClient(app)
 VALID_HEADERS = {"X-API-Key": "abcdef12345"}
 
 
-def test_get_forecast_returns_200_with_expected_json_structure():
+def test_get_forecast_returns_200_with_expected_json_structure() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -31,7 +31,7 @@ def test_get_forecast_returns_200_with_expected_json_structure():
     assert payload["data"][1] == {"date": "2026-04-02", "oil_bopd": 1192.5}
 
 
-def test_get_forecast_returns_403_without_api_key():
+def test_get_forecast_returns_403_without_api_key() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -45,7 +45,7 @@ def test_get_forecast_returns_403_without_api_key():
     assert response.json()["detail"] == "Invalid or missing API key"
 
 
-def test_get_forecast_returns_400_when_date_end_before_date_start():
+def test_get_forecast_returns_400_when_date_end_before_date_start() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -60,7 +60,7 @@ def test_get_forecast_returns_400_when_date_end_before_date_start():
     assert response.json()["detail"] == "date_end debe ser mayor o igual a date_start"
 
 
-def test_get_forecast_returns_422_when_missing_required_parameter():
+def test_get_forecast_returns_422_when_missing_required_parameter() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -73,7 +73,7 @@ def test_get_forecast_returns_422_when_missing_required_parameter():
     assert response.status_code == 422
 
 
-def test_get_forecast_returns_403_with_invalid_api_key():
+def test_get_forecast_returns_403_with_invalid_api_key() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -88,7 +88,7 @@ def test_get_forecast_returns_403_with_invalid_api_key():
     assert response.json()["detail"] == "Invalid or missing API key"
 
 
-def test_get_forecast_returns_404_for_unknown_well():
+def test_get_forecast_returns_404_for_unknown_well() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -103,7 +103,7 @@ def test_get_forecast_returns_404_for_unknown_well():
     assert response.json()["detail"] == "Pozo no encontrado"
 
 
-def test_get_forecast_returns_422_when_date_format_is_invalid():
+def test_get_forecast_returns_422_when_date_format_is_invalid() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -117,7 +117,7 @@ def test_get_forecast_returns_422_when_date_format_is_invalid():
     assert response.status_code == 422
 
 
-def test_get_forecast_same_start_and_end_date_returns_single_point():
+def test_get_forecast_same_start_and_end_date_returns_single_point() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -134,7 +134,7 @@ def test_get_forecast_same_start_and_end_date_returns_single_point():
     assert payload["data"][0] == {"date": "2026-04-05", "oil_bopd": 980.0}
 
 
-def test_get_forecast_long_range_never_returns_negative_production():
+def test_get_forecast_long_range_never_returns_negative_production() -> None:
     response = client.get(
         "/api/v1/forecast",
         params={
