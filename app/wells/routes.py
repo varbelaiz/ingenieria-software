@@ -1,9 +1,15 @@
 from datetime import date
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+
+from app.dependencies import validate_api_key
 
 
-router = APIRouter(prefix="/api/v1", tags=["wells"])
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["wells"],
+    dependencies=[Depends(validate_api_key)],
+)
 
 
 @router.get("/wells")

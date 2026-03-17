@@ -1,9 +1,15 @@
 from datetime import date, timedelta
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.dependencies import validate_api_key
 
 
-router = APIRouter(prefix="/api/v1", tags=["forecast"])
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["forecast"],
+    dependencies=[Depends(validate_api_key)],
+)
 
 BASE_PRODUCTION_BY_WELL = {
     "POZO-001": 1200.0,
