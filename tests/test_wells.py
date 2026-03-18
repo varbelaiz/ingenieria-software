@@ -1,3 +1,5 @@
+"""Tests for wells endpoint behavior and validations."""
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -8,7 +10,10 @@ VALID_HEADERS = {"X-API-Key": "abcdef12345"}
 
 
 def test_get_wells_returns_200_with_expected_json_structure() -> None:
-    response = client.get("/api/v1/wells", params={"date_query": "2026-04-28"}, headers=VALID_HEADERS)
+    """It should return 200 and the expected wells payload."""
+    response = client.get(
+        "/api/v1/wells", params={"date_query": "2026-04-28"}, headers=VALID_HEADERS
+    )
 
     assert response.status_code == 200
 
@@ -19,6 +24,7 @@ def test_get_wells_returns_200_with_expected_json_structure() -> None:
 
 
 def test_get_wells_returns_403_without_api_key() -> None:
+    """It should return 403 when API key header is missing."""
     response = client.get("/api/v1/wells", params={"date_query": "2026-04-28"})
 
     assert response.status_code == 403
@@ -26,6 +32,7 @@ def test_get_wells_returns_403_without_api_key() -> None:
 
 
 def test_get_wells_returns_403_with_invalid_api_key() -> None:
+    """It should return 403 when API key header is invalid."""
     response = client.get(
         "/api/v1/wells",
         params={"date_query": "2026-04-28"},
@@ -37,12 +44,14 @@ def test_get_wells_returns_403_with_invalid_api_key() -> None:
 
 
 def test_get_wells_returns_422_when_missing_date_query() -> None:
+    """It should return 422 when required date_query is missing."""
     response = client.get("/api/v1/wells", headers=VALID_HEADERS)
 
     assert response.status_code == 422
 
 
 def test_get_wells_returns_422_when_date_query_has_invalid_format() -> None:
+    """It should return 422 when date_query does not use YYYY-MM-DD format."""
     response = client.get(
         "/api/v1/wells",
         params={"date_query": "28-04-2026"},

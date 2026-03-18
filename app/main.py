@@ -1,3 +1,5 @@
+"""FastAPI application entry point and router registration."""
+
 from fastapi import FastAPI
 
 from app.forecast import router as forecast_router
@@ -11,5 +13,3 @@ app = FastAPI(
 
 app.include_router(wells_router)
 app.include_router(forecast_router)
-
-

@@ -1,3 +1,5 @@
+"""Forecast endpoints and mock production trend generation."""
+
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -24,11 +26,14 @@ def get_forecast(
     date_start: date = Query(..., description="Fecha inicial YYYY-MM-DD"),
     date_end: date = Query(..., description="Fecha final YYYY-MM-DD"),
 ) -> dict[str, object]:
+    """Return a decreasing linear mock forecast for a well and date range."""
     if id_well not in BASE_PRODUCTION_BY_WELL:
         raise HTTPException(status_code=404, detail="Pozo no encontrado")
 
     if date_end < date_start:
-        raise HTTPException(status_code=400, detail="date_end debe ser mayor o igual a date_start")
+        raise HTTPException(
+            status_code=400, detail="date_end debe ser mayor o igual a date_start"
+        )
 
     days = (date_end - date_start).days + 1
     base_value = BASE_PRODUCTION_BY_WELL[id_well]

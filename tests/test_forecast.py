@@ -1,3 +1,5 @@
+"""Tests for forecast endpoint behavior, errors, and edge cases."""
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -8,6 +10,7 @@ VALID_HEADERS = {"X-API-Key": "abcdef12345"}
 
 
 def test_get_forecast_returns_200_with_expected_json_structure() -> None:
+    """It should return 200 with the expected forecast payload structure."""
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -32,6 +35,7 @@ def test_get_forecast_returns_200_with_expected_json_structure() -> None:
 
 
 def test_get_forecast_returns_403_without_api_key() -> None:
+    """It should return 403 when API key header is missing."""
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -46,6 +50,7 @@ def test_get_forecast_returns_403_without_api_key() -> None:
 
 
 def test_get_forecast_returns_400_when_date_end_before_date_start() -> None:
+    """It should return 400 when date_end is before date_start."""
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -61,6 +66,7 @@ def test_get_forecast_returns_400_when_date_end_before_date_start() -> None:
 
 
 def test_get_forecast_returns_422_when_missing_required_parameter() -> None:
+    """It should return 422 when id_well is not provided."""
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -74,6 +80,7 @@ def test_get_forecast_returns_422_when_missing_required_parameter() -> None:
 
 
 def test_get_forecast_returns_403_with_invalid_api_key() -> None:
+    """It should return 403 when API key header is invalid."""
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -89,6 +96,7 @@ def test_get_forecast_returns_403_with_invalid_api_key() -> None:
 
 
 def test_get_forecast_returns_404_for_unknown_well() -> None:
+    """It should return 404 when the requested well does not exist."""
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -104,6 +112,7 @@ def test_get_forecast_returns_404_for_unknown_well() -> None:
 
 
 def test_get_forecast_returns_422_when_date_format_is_invalid() -> None:
+    """It should return 422 when a date parameter has invalid format."""
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -118,6 +127,7 @@ def test_get_forecast_returns_422_when_date_format_is_invalid() -> None:
 
 
 def test_get_forecast_same_start_and_end_date_returns_single_point() -> None:
+    """It should return one data point when start and end dates are equal."""
     response = client.get(
         "/api/v1/forecast",
         params={
@@ -135,6 +145,7 @@ def test_get_forecast_same_start_and_end_date_returns_single_point() -> None:
 
 
 def test_get_forecast_long_range_never_returns_negative_production() -> None:
+    """It should clamp production to zero on long date ranges."""
     response = client.get(
         "/api/v1/forecast",
         params={
