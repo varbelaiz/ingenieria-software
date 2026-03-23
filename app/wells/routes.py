@@ -2,15 +2,12 @@
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
-
-from app.dependencies import validate_api_key
+from fastapi import APIRouter, Query
 
 
 router = APIRouter(
     prefix="/api/v1",
     tags=["wells"],
-    dependencies=[Depends(validate_api_key)],
 )
 
 

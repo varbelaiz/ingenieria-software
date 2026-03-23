@@ -2,15 +2,12 @@
 
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-
-from app.dependencies import validate_api_key
+from fastapi import APIRouter, HTTPException, Query
 
 
 router = APIRouter(
     prefix="/api/v1",
     tags=["forecast"],
-    dependencies=[Depends(validate_api_key)],
 )
 
 BASE_PRODUCTION_BY_WELL = {
