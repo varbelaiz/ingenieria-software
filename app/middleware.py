@@ -12,7 +12,12 @@ API_KEY = os.environ["API_KEY"]
 class ApiKeyMiddleware(BaseHTTPMiddleware):
     """Validates the X-API-Key header on every incoming request."""
 
+    EXCLUDED_PATHS = {"/docs", "/openapi.json"}
+
     async def dispatch(self, request: Request, call_next):
+        if request.url.path in self.EXCLUDED_PATHS:
+            return await call_next(request)
+
         api_key = request.headers.get("X-API-Key")
 
         if api_key != API_KEY:
