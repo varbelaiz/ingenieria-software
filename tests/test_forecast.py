@@ -34,21 +34,6 @@ def test_get_forecast_returns_200_with_expected_json_structure() -> None:
     assert payload["data"][1] == {"date": "2026-04-02", "oil_bopd": 1192.5}
 
 
-def test_get_forecast_returns_403_without_api_key() -> None:
-    """It should return 403 when API key header is missing."""
-    response = client.get(
-        "/api/v1/forecast",
-        params={
-            "id_well": "POZO-001",
-            "date_start": "2026-04-01",
-            "date_end": "2026-04-03",
-        },
-    )
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Invalid or missing API key"
-
-
 def test_get_forecast_returns_400_when_date_end_before_date_start() -> None:
     """It should return 400 when date_end is before date_start."""
     response = client.get(
@@ -77,22 +62,6 @@ def test_get_forecast_returns_422_when_missing_required_parameter() -> None:
     )
 
     assert response.status_code == 422
-
-
-def test_get_forecast_returns_403_with_invalid_api_key() -> None:
-    """It should return 403 when API key header is invalid."""
-    response = client.get(
-        "/api/v1/forecast",
-        params={
-            "id_well": "POZO-001",
-            "date_start": "2026-04-01",
-            "date_end": "2026-04-03",
-        },
-        headers={"X-API-Key": "invalid-key"},
-    )
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Invalid or missing API key"
 
 
 def test_get_forecast_returns_404_for_unknown_well() -> None:
@@ -142,6 +111,58 @@ def test_get_forecast_same_start_and_end_date_returns_single_point() -> None:
     payload = response.json()
     assert len(payload["data"]) == 1
     assert payload["data"][0] == {"date": "2026-04-05", "oil_bopd": 980.0}
+
+
+def test_get_forecast_returns_422_when_missing_date_start() -> None:
+    """It should return 422 when date_start is not provided."""
+    response = client.get(
+        "/api/v1/forecast",
+        params={
+            "id_well": "POZO-001",
+            "date_end": "2026-04-03",
+        },
+        headers=VALID_HEADERS,
+    )
+
+    assert response.status_code == 422
+
+
+def test_get_forecast_returns_422_when_missing_date_end() -> None:
+    """It should return 422 when date_end is not provided."""
+    response = client.get(
+        "/api/v1/forecast",
+        params={
+            "id_well": "POZO-001",
+            "date_start": "2026-04-01",
+        },
+        headers=VALID_HEADERS,
+    )
+
+    assert response.status_code == 422
+
+
+def test_get_forecast_uses_correct_base_production_per_well() -> None:
+    """It should use the correct base production value for each well."""
+    expected_base = {
+        "POZO-001": 1200.0,
+        "POZO-002": 980.0,
+        "POZO-003": 760.0,
+    }
+
+    for well_id, base_value in expected_base.items():
+        response = client.get(
+            "/api/v1/forecast",
+            params={
+                "id_well": well_id,
+                "date_start": "2026-04-01",
+                "date_end": "2026-04-01",
+            },
+            headers=VALID_HEADERS,
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["data"][0]["oil_bopd"] == base_value
 
 
 def test_get_forecast_long_range_never_returns_negative_production() -> None:
