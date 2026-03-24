@@ -1,10 +1,11 @@
 """Global middleware for request-level concerns."""
 
 import os
+from typing import Awaitable, Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 
 API_KEY = os.environ["API_KEY"]
 
@@ -14,7 +15,9 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
 
     EXCLUDED_PATHS = {"/docs", "/openapi.json"}
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         if request.url.path in self.EXCLUDED_PATHS:
             return await call_next(request)
 

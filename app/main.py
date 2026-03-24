@@ -3,11 +3,11 @@
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-load_dotenv()
+from app.forecast import router as forecast_router
+from app.middleware import ApiKeyMiddleware
+from app.wells import router as wells_router
 
-from app.forecast import router as forecast_router  # noqa: E402
-from app.middleware import ApiKeyMiddleware  # noqa: E402
-from app.wells import router as wells_router  # noqa: E402
+load_dotenv()
 
 app = FastAPI(
     title="Plataforma Predictiva de Produccion",
