@@ -149,17 +149,15 @@ def _prometheus_lines() -> list[str]:
     with _LOCK:
         for labels in histogram_labels:
             bucket_counts = _REQUEST_DURATION_BUCKET_COUNTS[labels]
-            cumulative = 0.0
             label_text = labels.to_prometheus()
 
-            for bucket_upper_bound, bucket_count in zip(
+            for bucket_upper_bound, cumulative_count in zip(
                 REQUEST_DURATION_BUCKETS, bucket_counts
             ):
-                cumulative += bucket_count
                 lines.append(
                     "forecast_api_request_duration_seconds_bucket"
                     f'{{{label_text},le="{bucket_upper_bound}"}} '
-                    f"{cumulative:.0f}"
+                    f"{cumulative_count:.0f}"
                 )
 
             total_count = _REQUEST_DURATION_COUNT[labels]
