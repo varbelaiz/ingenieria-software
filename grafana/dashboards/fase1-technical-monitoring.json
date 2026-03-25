@@ -303,7 +303,7 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -312,12 +312,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 4,
+            "lineWidth": 3,
+            "pointSize": 6,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "always",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -329,7 +329,32 @@
           },
           "unit": "s"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p50"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Median (p50)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tail (p95)"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -341,7 +366,7 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
@@ -387,7 +412,7 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -396,12 +421,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 4,
+            "lineWidth": 3,
+            "pointSize": 6,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "always",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -413,7 +438,32 @@
           },
           "unit": "reqps"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/api/v1/forecast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Forecast requests"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/api/v1/wells"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Wells requests"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -425,7 +475,7 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
@@ -464,7 +514,7 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -473,12 +523,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 4,
+            "lineWidth": 3,
+            "pointSize": 6,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "always",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -490,7 +540,32 @@
           },
           "unit": "percentunit"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "403"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "403 Forbidden"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "404"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "404 Not Found"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -514,7 +589,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (status_code) (increase(forecast_api_errors_total[$__rate_interval])) / clamp_min(sum(increase(forecast_api_requests_total[$__rate_interval])), 1)",
+          "expr": "sum by (status_code) (increase(forecast_api_requests_total{status_code=~\"4..|5..\",path!=\"/metrics\"}[5m])) / scalar(clamp_min(sum(increase(forecast_api_requests_total{path!=\"/metrics\"}[5m])), 1))",
           "legendFormat": "{{ status_code }}",
           "range": true,
           "refId": "A"
@@ -581,6 +656,22 @@
               {
                 "id": "custom.axisPlacement",
                 "value": "right"
+              },
+              {
+                "id": "displayName",
+                "value": "CPU usage rate"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resident memory"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Resident memory"
               }
             ]
           }
