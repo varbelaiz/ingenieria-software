@@ -50,11 +50,11 @@ La base de monitoreo técnico usa:
 
 ### Métricas cubiertas
 
-- Latencia del endpoint `GET /api/v1/forecast`
-- Disponibilidad de la API vía la métrica `up` de Prometheus
-- Tasa de errores HTTP
-- Frecuencia de consultas a la API
-- Uso de recursos del proceso con métricas estándar de Prometheus (`process_*`)
+- Estado de scrape de Prometheus sobre la API (`up`)
+- Latencia de requests exitosos del endpoint `GET /api/v1/forecast`
+- Tasa de errores HTTP (`4xx/5xx`)
+- Frecuencia de requests a la API
+- Uso de recursos del proceso Python expuesto en `/metrics`
 
 ### Levantar monitoreo local
 
@@ -91,7 +91,14 @@ Fase 1 / Fase 1 - Technical Monitoring
 
 ### Nota sobre recursos del servicio
 
-El dashboard ya muestra memoria residente y consumo de CPU del proceso cuando la API corre en un entorno compatible con los collectors por defecto de `prometheus-client`. Si más adelante Fase 1 exige métricas de infraestructura más finas, el siguiente paso mínimo sería agregar exporters del host o contenedor, pero no es necesario para esta base.
+`Prometheus Scrape Status` indica si Prometheus puede obtener métricas desde el target configurado. No equivale, por sí solo, a una validación funcional completa del servicio.
+
+`API Process Resource Usage` muestra métricas del proceso Python de la API:
+
+- memoria residente (`process_resident_memory_bytes`)
+- tasa de tiempo de CPU consumido (`rate(process_cpu_seconds_total[5m])`)
+
+Estas métricas describen el proceso instrumentado y no el host completo ni el contenedor de Docker. Si más adelante Fase 1 exige métricas de infraestructura más finas, el siguiente paso mínimo sería agregar exporters del host o contenedor, pero no es necesario para esta base.
 
 ## Estructura del proyecto
 
