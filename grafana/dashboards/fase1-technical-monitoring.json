@@ -514,7 +514,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (status_code) (rate(forecast_api_errors_total[5m])) / clamp_min(sum(rate(forecast_api_requests_total[5m])), 0.0001)",
+          "expr": "sum by (status_code) (increase(forecast_api_errors_total[$__rate_interval])) / clamp_min(sum(increase(forecast_api_requests_total[$__rate_interval])), 1)",
           "legendFormat": "{{ status_code }}",
           "range": true,
           "refId": "A"

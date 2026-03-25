@@ -89,6 +89,28 @@ password: admin
 Fase 1 / Fase 1 - Technical Monitoring
 ```
 
+### Generar tráfico de prueba
+
+Para poblar el dashboard automáticamente con requests exitosas y con error:
+
+```bash
+uv run python scripts/generate_monitoring_traffic.py
+```
+
+El script genera, por ciclo:
+
+- `GET /api/v1/wells` exitoso
+- `GET /api/v1/forecast` exitoso
+- `GET /api/v1/wells` con API key inválida (`403`)
+- `GET /api/v1/forecast` con pozo inexistente (`404`)
+
+Opciones útiles:
+
+```bash
+uv run python scripts/generate_monitoring_traffic.py --cycles 10 --pause-seconds 1
+uv run python scripts/generate_monitoring_traffic.py --api-url http://127.0.0.1:8000 --api-key api_key
+```
+
 ### Nota sobre recursos del servicio
 
 `Prometheus Scrape Status` indica si Prometheus puede obtener métricas desde el target configurado. No equivale, por sí solo, a una validación funcional completa del servicio.
