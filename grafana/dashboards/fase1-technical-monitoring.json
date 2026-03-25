@@ -95,7 +95,7 @@
           "refId": "A"
         }
       ],
-      "title": "API Uptime",
+      "title": "Prometheus Scrape Status",
       "type": "stat"
     },
     {
@@ -154,13 +154,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m])))",
           "legendFormat": "P95",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Forecast Latency P95",
+      "title": "Forecast Success Latency P95",
       "type": "stat"
     },
     {
@@ -225,7 +225,7 @@
           "refId": "A"
         }
       ],
-      "title": "HTTP Error Ratio",
+      "title": "HTTP Error Ratio (4xx/5xx)",
       "type": "stat"
     },
     {
@@ -282,7 +282,7 @@
           "refId": "A"
         }
       ],
-      "title": "API Query Rate",
+      "title": "API Request Rate",
       "type": "stat"
     },
     {
@@ -353,20 +353,20 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m])))",
           "legendFormat": "p50",
           "range": true,
           "refId": "A"
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m])))",
           "legendFormat": "p95",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Forecast Endpoint Latency",
+      "title": "Forecast Success Latency",
       "type": "timeseries"
     },
     {
@@ -520,7 +520,7 @@
           "refId": "A"
         }
       ],
-      "title": "HTTP Error Ratio by Status",
+      "title": "HTTP Error Ratio by Status (4xx/5xx)",
       "type": "timeseries"
     },
     {
@@ -567,7 +567,24 @@
           },
           "unit": "bytes"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cpu seconds/sec"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -604,7 +621,7 @@
           "refId": "B"
         }
       ],
-      "title": "Service Resource Usage",
+      "title": "API Process Resource Usage",
       "type": "timeseries"
     }
   ],
