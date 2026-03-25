@@ -3,18 +3,24 @@
 import os
 from typing import Awaitable, Callable
 
-from app.monitoring import observe_request, start_timer
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from app.monitoring import observe_request, start_timer
+
+
+# Pylint flags this Starlette middleware shape, but it is expected here.
+# pylint: disable=too-few-public-methods
 class ApiKeyMiddleware(BaseHTTPMiddleware):
     """Validates the X-API-Key header on every incoming request."""
 
     EXCLUDED_PATHS = {"/docs", "/openapi.json", "/metrics"}
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         started_at = start_timer()
         path = request.url.path
@@ -24,7 +30,12 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             if path == "/metrics":
                 return response
-            observe_request(request.method, path, response.status_code, started_at)
+            observe_request(
+                request.method,
+                path,
+                response.status_code,
+                started_at,
+            )
             return response
 
         if not api_key_configured:
@@ -32,7 +43,12 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
                 status_code=500,
                 content={"detail": "API_KEY is not configured"},
             )
-            observe_request(request.method, path, response.status_code, started_at)
+            observe_request(
+                request.method,
+                path,
+                response.status_code,
+                started_at,
+            )
             return response
 
         api_key = request.headers.get("X-API-Key")
@@ -42,7 +58,12 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
                 status_code=403,
                 content={"detail": "Invalid or missing API key"},
             )
-            observe_request(request.method, path, response.status_code, started_at)
+            observe_request(
+                request.method,
+                path,
+                response.status_code,
+                started_at,
+            )
             return response
 
         try:
@@ -51,5 +72,10 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
             observe_request(request.method, path, 500, started_at)
             raise
 
-        observe_request(request.method, path, response.status_code, started_at)
+        observe_request(
+            request.method,
+            path,
+            response.status_code,
+            started_at,
+        )
         return response

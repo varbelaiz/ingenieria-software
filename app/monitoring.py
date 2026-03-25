@@ -1,4 +1,4 @@
-"""Minimal Prometheus-compatible metrics for the technical monitoring dashboard."""
+"""Minimal Prometheus-compatible metrics for technical monitoring."""
 
 from __future__ import annotations
 
@@ -41,7 +41,9 @@ class MetricLabels:
     def to_prometheus(self) -> str:
         """Serialize labels using Prometheus exposition syntax."""
         return (
-            f'method="{self.method}",path="{self.path}",status_code="{self.status_code}"'
+            f'method="{self.method}",'
+            f'path="{self.path}",'
+            f'status_code="{self.status_code}"'
         )
 
 
@@ -70,7 +72,9 @@ def normalize_path(raw_path: str) -> str:
     return raw_path
 
 
-def observe_request(method: str, path: str, status_code: int, started_at: float) -> None:
+def observe_request(
+    method: str, path: str, status_code: int, started_at: float
+) -> None:
     """Record counters and latency for a completed HTTP request."""
     labels = MetricLabels(
         method=method,
@@ -95,37 +99,50 @@ def observe_request(method: str, path: str, status_code: int, started_at: float)
 def _prometheus_lines() -> list[str]:
     """Render all metric series in Prometheus text exposition format."""
     lines = [
-        "# HELP forecast_api_requests_total Total HTTP requests handled by the API.",
+        (
+            "# HELP forecast_api_requests_total Total HTTP requests handled "
+            "by the API."
+        ),
         "# TYPE forecast_api_requests_total counter",
     ]
 
     with _LOCK:
-        request_series = sorted(_REQUEST_COUNT.items(), key=lambda item: item[0].to_prometheus())
-        error_series = sorted(_ERROR_COUNT.items(), key=lambda item: item[0].to_prometheus())
+        request_series = sorted(
+            _REQUEST_COUNT.items(),
+            key=lambda item: item[0].to_prometheus(),
+        )
+        error_series = sorted(
+            _ERROR_COUNT.items(),
+            key=lambda item: item[0].to_prometheus(),
+        )
         histogram_labels = sorted(
             _REQUEST_DURATION_COUNT.keys(),
             key=lambda labels: labels.to_prometheus(),
         )
 
     for labels, count in request_series:
-        lines.append(
-            f"forecast_api_requests_total{{{labels.to_prometheus()}}} {count:.0f}"
-        )
+        label_text = labels.to_prometheus()
+        lines.append(f"forecast_api_requests_total{{{label_text}}} " f"{count:.0f}")
 
     lines.extend(
         [
-            "# HELP forecast_api_errors_total Total HTTP error responses returned by the API.",
+            (
+                "# HELP forecast_api_errors_total Total HTTP error responses "
+                "returned by the API."
+            ),
             "# TYPE forecast_api_errors_total counter",
         ]
     )
     for labels, count in error_series:
-        lines.append(
-            f"forecast_api_errors_total{{{labels.to_prometheus()}}} {count:.0f}"
-        )
+        label_text = labels.to_prometheus()
+        lines.append(f"forecast_api_errors_total{{{label_text}}} {count:.0f}")
 
     lines.extend(
         [
-            "# HELP forecast_api_request_duration_seconds HTTP request latency in seconds.",
+            (
+                "# HELP forecast_api_request_duration_seconds HTTP request "
+                "latency in seconds."
+            ),
             "# TYPE forecast_api_request_duration_seconds histogram",
         ]
     )
@@ -133,6 +150,7 @@ def _prometheus_lines() -> list[str]:
         for labels in histogram_labels:
             bucket_counts = _REQUEST_DURATION_BUCKET_COUNTS[labels]
             cumulative = 0.0
+            label_text = labels.to_prometheus()
 
             for bucket_upper_bound, bucket_count in zip(
                 REQUEST_DURATION_BUCKETS, bucket_counts
@@ -140,21 +158,23 @@ def _prometheus_lines() -> list[str]:
                 cumulative += bucket_count
                 lines.append(
                     "forecast_api_request_duration_seconds_bucket"
-                    f'{{{labels.to_prometheus()},le="{bucket_upper_bound}"}} {cumulative:.0f}'
+                    f'{{{label_text},le="{bucket_upper_bound}"}} '
+                    f"{cumulative:.0f}"
                 )
 
             total_count = _REQUEST_DURATION_COUNT[labels]
+            label_text = labels.to_prometheus()
             lines.append(
                 "forecast_api_request_duration_seconds_bucket"
-                f'{{{labels.to_prometheus()},le="+Inf"}} {total_count:.0f}'
+                f'{{{label_text},le="+Inf"}} {total_count:.0f}'
             )
             lines.append(
-                f"forecast_api_request_duration_seconds_count{{{labels.to_prometheus()}}} "
-                f"{total_count:.0f}"
+                "forecast_api_request_duration_seconds_count"
+                f"{{{label_text}}} {total_count:.0f}"
             )
             lines.append(
-                f"forecast_api_request_duration_seconds_sum{{{labels.to_prometheus()}}} "
-                f"{_REQUEST_DURATION_SUM[labels]}"
+                "forecast_api_request_duration_seconds_sum"
+                f"{{{label_text}}} {_REQUEST_DURATION_SUM[labels]}"
             )
 
     lines.extend(_process_metric_lines())
@@ -170,13 +190,25 @@ def _process_metric_lines() -> Iterable[str]:
     return [
         "# HELP process_resident_memory_bytes Resident memory size in bytes.",
         "# TYPE process_resident_memory_bytes gauge",
-        f'process_resident_memory_bytes{{pid="{os.getpid()}"}} {resident_memory_bytes}',
-        "# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.",
+        (
+            f'process_resident_memory_bytes{{pid="{os.getpid()}"}} '
+            f"{resident_memory_bytes}"
+        ),
+        (
+            "# HELP process_cpu_seconds_total Total user and system CPU time "
+            "spent in seconds."
+        ),
         "# TYPE process_cpu_seconds_total counter",
-        f'process_cpu_seconds_total{{pid="{os.getpid()}"}} {cpu_seconds}',
-        "# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.",
+        (f'process_cpu_seconds_total{{pid="{os.getpid()}"}} ' f"{cpu_seconds}"),
+        (
+            "# HELP process_start_time_seconds Start time of the process "
+            "since unix epoch in seconds."
+        ),
         "# TYPE process_start_time_seconds gauge",
-        f'process_start_time_seconds{{pid="{os.getpid()}"}} {_PROCESS_START_TIME_SECONDS}',
+        (
+            f'process_start_time_seconds{{pid="{os.getpid()}"}} '
+            f"{_PROCESS_START_TIME_SECONDS}"
+        ),
     ]
 
 
