@@ -40,6 +40,59 @@ API_KEY=api_key
 uv run uvicorn app.main:app --reload
 ```
 
+## Monitoreo técnico Fase 1
+
+La base de monitoreo técnico usa:
+
+- `/metrics` expuesto por la API en formato Prometheus
+- Prometheus local para scrappear métricas de la API
+- Grafana provisionado con un dashboard inicial de Fase 1
+
+### Métricas cubiertas
+
+- Latencia del endpoint `GET /api/v1/forecast`
+- Disponibilidad de la API vía la métrica `up` de Prometheus
+- Tasa de errores HTTP
+- Frecuencia de consultas a la API
+- Uso de recursos del proceso con métricas estándar de Prometheus (`process_*`)
+
+### Levantar monitoreo local
+
+1. Instalar dependencias de Python:
+
+```bash
+uv sync
+```
+
+2. Levantar la API:
+
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+3. En otra terminal, levantar Prometheus y Grafana:
+
+```bash
+docker compose -f docker-compose.monitoring.yml up
+```
+
+4. Abrir Grafana en `http://localhost:3000` con:
+
+```text
+usuario: admin
+password: admin
+```
+
+5. Abrir el dashboard provisionado:
+
+```text
+Fase 1 / Fase 1 - Technical Monitoring
+```
+
+### Nota sobre recursos del servicio
+
+El dashboard ya muestra memoria residente y consumo de CPU del proceso cuando la API corre en un entorno compatible con los collectors por defecto de `prometheus-client`. Si más adelante Fase 1 exige métricas de infraestructura más finas, el siguiente paso mínimo sería agregar exporters del host o contenedor, pero no es necesario para esta base.
+
 ## Estructura del proyecto
 
 ```
