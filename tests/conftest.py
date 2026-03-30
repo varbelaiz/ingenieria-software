@@ -2,4 +2,6 @@
 
 import os
 
-os.environ["API_KEY"] = "abcdef12345"
+from tests import TEST_API_KEY
+
+os.environ["API_KEY"] = TEST_API_KEY

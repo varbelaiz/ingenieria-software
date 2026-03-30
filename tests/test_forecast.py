@@ -3,10 +3,11 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests import TEST_API_KEY
 
 
 client = TestClient(app)
-VALID_HEADERS = {"X-API-Key": "abcdef12345"}
+VALID_HEADERS = {"X-API-Key": TEST_API_KEY}
 
 
 def test_get_forecast_returns_200_with_expected_json_structure() -> None:
