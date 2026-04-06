@@ -40,6 +40,37 @@ API_KEY=api_key
 uv run uvicorn app.main:app --reload
 ```
 
+## Setup local con Docker Compose
+
+Para levantar la API, Prometheus y Grafana con un solo comando en modo desarrollo:
+
+1. Copiar variables de entorno para Compose:
+
+```bash
+cp .env.compose.example .env.compose
+```
+
+2. Levantar el stack completo:
+
+```bash
+docker compose -f docker-compose.monitoring.yml up --build
+```
+
+Servicios disponibles:
+
+- API: `http://localhost:8000`
+- Docs: `http://localhost:8000/docs`
+- Metrics: `http://localhost:8000/metrics`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000`
+
+Esta variante esta pensada para desarrollo local:
+
+- la API corre dentro de Docker
+- el codigo del repo se monta como volumen
+- `uvicorn` corre con `--reload`
+- Prometheus scrapea al servicio `api` dentro de la red de Compose
+
 ## Monitoreo técnico Fase 1
 
 La base de monitoreo técnico usa:
@@ -58,32 +89,26 @@ La base de monitoreo técnico usa:
 
 ### Levantar monitoreo local
 
-1. Instalar dependencias de Python:
+1. Copiar variables de entorno de Compose:
 
 ```bash
-uv sync
+cp .env.compose.example .env.compose
 ```
 
-2. Levantar la API:
+2. Levantar API, Prometheus y Grafana:
 
 ```bash
-uv run uvicorn app.main:app --reload
+docker compose -f docker-compose.monitoring.yml up --build
 ```
 
-3. En otra terminal, levantar Prometheus y Grafana:
-
-```bash
-docker compose -f docker-compose.monitoring.yml up
-```
-
-4. Abrir Grafana en `http://localhost:3000` con:
+3. Abrir Grafana en `http://localhost:3000` con:
 
 ```text
 usuario: admin
 password: admin
 ```
 
-5. Abrir el dashboard provisionado:
+4. Abrir el dashboard provisionado:
 
 ```text
 Fase 1 / Fase 1 - Technical Monitoring
@@ -96,6 +121,8 @@ Para poblar el dashboard automáticamente con requests exitosas y con error:
 ```bash
 uv run python scripts/generate_monitoring_traffic.py
 ```
+
+El script se sigue ejecutando desde el host y apunta a `http://localhost:8000`.
 
 El script genera, por ciclo:
 
