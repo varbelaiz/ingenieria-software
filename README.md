@@ -138,6 +138,72 @@ uv run python scripts/generate_monitoring_traffic.py --cycles 10 --pause-seconds
 uv run python scripts/generate_monitoring_traffic.py --api-url http://127.0.0.1:8000 --api-key api_key
 ```
 
+### Tráfico sintético con `k6`
+
+Además del script Python de smoke/demo, el repo incluye una base desacoplada de
+tráfico sintético en [load/traffic.js](/Users/franco/Documentos/UdeSA Local/4to año/1er semestre/Ing. Software/ingenieria-software/load/traffic.js).
+
+Configuración por variables de entorno:
+
+- `API_BASE_URL` (default: `http://127.0.0.1:8000`)
+- `API_KEY` (default: `api_key`)
+- `TRAFFIC_PROFILE` (`seed` o `realistic`, default: `seed`)
+
+Perfil `seed`:
+
+```bash
+API_BASE_URL=http://127.0.0.1:8000 \
+API_KEY=api_key \
+TRAFFIC_PROFILE=seed \
+k6 run load/traffic.js
+```
+
+Perfil `realistic`:
+
+```bash
+API_BASE_URL=http://127.0.0.1:8000 \
+API_KEY=api_key \
+TRAFFIC_PROFILE=realistic \
+k6 run load/traffic.js
+```
+
+El perfil `seed` genera un patrón determinístico que garantiza tráfico `200`,
+`403` y `404` para mantener visibles los paneles actuales de Grafana.
+
+El perfil `realistic` usa una mezcla ponderada donde predominan requests
+exitosos a `forecast`, con menor proporción de `wells`, `403` y `404`.
+
+### Ejecutar el traffic generator en contenedor
+
+Esta primera versión no forma parte del compose principal y se mantiene
+desacoplada de la API.
+
+Build de la imagen:
+
+```bash
+docker build -t forecast-traffic ./load
+```
+
+Run contra una API local:
+
+```bash
+docker run --rm \
+  -e API_BASE_URL=http://host.docker.internal:8000 \
+  -e API_KEY=api_key \
+  -e TRAFFIC_PROFILE=seed \
+  forecast-traffic
+```
+
+Run contra una API remota:
+
+```bash
+docker run --rm \
+  -e API_BASE_URL=https://your-api.example.com \
+  -e API_KEY=your_api_key \
+  -e TRAFFIC_PROFILE=realistic \
+  forecast-traffic
+```
+
 ### Nota sobre recursos del servicio
 
 `Prometheus Scrape Status` indica si Prometheus puede obtener métricas desde el target configurado. No equivale, por sí solo, a una validación funcional completa del servicio.
