@@ -58,8 +58,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy new image on EC2
-        env:
-          API_KEY: ${{ secrets.API_KEY }}
         run: |
           IMAGE=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
 
@@ -71,6 +69,6 @@ jobs:
               \"docker pull ${IMAGE}\",
               \"docker stop ${{ env.ECR_REPOSITORY }} || true\",
               \"docker rm ${{ env.ECR_REPOSITORY }} || true\",
-              \"docker run -d --name ${{ env.ECR_REPOSITORY }} -p 8000:8000 -e API_KEY=${API_KEY} ${IMAGE}\"
+              \"docker run -d --name ${{ env.ECR_REPOSITORY }} -p 8000:8000 -e API_KEY=\$(aws secretsmanager get-secret-value --secret-id api/api-key --region ${{ env.AWS_REGION }} --query SecretString --output text) ${IMAGE}\"
             ]" \
             --region ${{ env.AWS_REGION }}
