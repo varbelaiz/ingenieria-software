@@ -1,17 +1,18 @@
-FROM python:3.10-slim AS base
+FROM python:3.12-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    UV_LINK_MODE=copy
 
 WORKDIR /app
 
-# Install uv
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /uvx /usr/local/bin/
 
-# Copy dependency files first for better layer caching
 COPY pyproject.toml uv.lock ./
-
-# Install production dependencies only (no dev group)
 RUN uv sync --frozen --no-dev
 
-# Copy application source
 COPY app/ ./app/
 
 RUN adduser --disabled-password --gecos "" appuser

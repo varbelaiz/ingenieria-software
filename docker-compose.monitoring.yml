@@ -1,7 +1,32 @@
 services:
+  api:
+    build: .
+    container_name: forecast-api
+    working_dir: /app
+    command:
+      - uv
+      - run
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+    env_file:
+      - .env.compose
+    environment:
+      UV_PROJECT_ENVIRONMENT: /opt/venv
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+
   prometheus:
     image: prom/prometheus:v3.2.1
     container_name: forecast-prometheus
+    depends_on:
+      - api
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     ports:
@@ -16,9 +41,9 @@ services:
       - prometheus
     ports:
       - "3000:3000"
+    env_file:
+      - .env.compose
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/fase1/fase1-technical-monitoring.json
     volumes:
