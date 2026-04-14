@@ -26,6 +26,17 @@ def test_metrics_endpoint_is_exposed_without_api_key() -> None:
     assert response.status_code == 200
     assert "forecast_api_requests_total" in response.text
     assert "process_resident_memory_bytes" in response.text
+    assert 'path="/metrics"' not in response.text
+
+
+def test_healthz_is_not_recorded_in_metrics() -> None:
+    """Health checks should not create application request metric series."""
+    health_response = client.get("/healthz")
+    metrics_response = client.get("/metrics")
+
+    assert health_response.status_code == 200
+    assert metrics_response.status_code == 200
+    assert 'path="/healthz"' not in metrics_response.text
 
 
 def test_forecast_request_is_recorded_in_metrics() -> None:

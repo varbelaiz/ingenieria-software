@@ -62,6 +62,7 @@ docker compose up --build
 Servicios disponibles:
 
 - API: `http://localhost:8000`
+- Health: `http://localhost:8000/healthz`
 - Metrics: `http://localhost:8000/metrics`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
@@ -77,6 +78,7 @@ Este compose usa una imagen independiente por unidad:
 
 La base de monitoreo técnico usa:
 
+- `/healthz` expuesto por la API para health checks de infraestructura
 - `/metrics` expuesto por la API en formato Prometheus
 - Prometheus local para scrappear métricas de la API
 - Grafana provisionado con un dashboard inicial de Fase 1
@@ -244,7 +246,17 @@ load/
 
 ## Autenticación
 
-Todos los endpoints requieren el header `X-API-Key` con una clave válida. La clave se configura mediante la variable de entorno `API_KEY`. Si la clave es inválida o no se proporciona, se retorna un error `403 Forbidden`.
+Los endpoints de negocio requieren el header `X-API-Key` con una clave válida.
+La clave se configura mediante la variable de entorno `API_KEY`. Si la clave es
+inválida o no se proporciona, se retorna un error `403 Forbidden`.
+
+Excepciones técnicas sin autenticación:
+
+- `GET /healthz` para health checks de infraestructura
+- `GET /metrics` para scrapes de Prometheus
+
+`/metrics` se mantiene expuesto para el stack de monitoreo local y más adelante
+puede bloquearse públicamente a nivel de ALB sin cambiar la app.
 
 ## Endpoints
 

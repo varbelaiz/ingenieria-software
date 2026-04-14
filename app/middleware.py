@@ -15,7 +15,8 @@ from app.monitoring import observe_request, start_timer
 class ApiKeyMiddleware(BaseHTTPMiddleware):
     """Validates the X-API-Key header on every incoming request."""
 
-    EXCLUDED_PATHS = {"/docs", "/openapi.json", "/metrics"}
+    EXCLUDED_PATHS = {"/docs", "/openapi.json", "/metrics", "/healthz"}
+    NON_INSTRUMENTED_PATHS = {"/metrics", "/healthz"}
 
     async def dispatch(
         self,
@@ -26,9 +27,9 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         api_key_configured = os.getenv("API_KEY")
 
-        if request.url.path in self.EXCLUDED_PATHS:
+        if path in self.EXCLUDED_PATHS:
             response = await call_next(request)
-            if path == "/metrics":
+            if path in self.NON_INSTRUMENTED_PATHS:
                 return response
             observe_request(
                 request.method,
