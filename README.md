@@ -32,6 +32,8 @@ Editar `.env` con los valores correspondientes:
 
 ```
 API_KEY=api_key
+GF_SECURITY_ADMIN_USER=admin
+GF_SECURITY_ADMIN_PASSWORD=admin
 ```
 
 4. Ejecutar el servidor:
@@ -42,34 +44,34 @@ uv run uvicorn app.main:app --reload
 
 ## Setup local con Docker Compose
 
-Para levantar la API, Prometheus y Grafana con un solo comando en modo desarrollo:
+Para levantar la API, Prometheus y Grafana con un solo comando en un stack local
+mas cercano al runtime de cloud:
 
-1. Copiar variables de entorno para Compose:
+1. Crear o completar `.env`:
 
 ```bash
-cp .env.compose.example .env.compose
+cp .env.example .env
 ```
 
 2. Levantar el stack completo:
 
 ```bash
-docker compose -f docker-compose.monitoring.yml up --build
+docker compose up --build
 ```
 
 Servicios disponibles:
 
 - API: `http://localhost:8000`
-- Docs: `http://localhost:8000/docs`
 - Metrics: `http://localhost:8000/metrics`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
 
-Esta variante esta pensada para desarrollo local:
+Este compose usa una imagen independiente por unidad:
 
-- la API corre dentro de Docker
-- el codigo del repo se monta como volumen
-- `uvicorn` corre con `--reload`
-- Prometheus scrapea al servicio `api` dentro de la red de Compose
+- `app` corre standalone, sin bind mounts ni `--reload`
+- `prometheus` bakea `prometheus/prometheus.yml` en su propia imagen
+- `grafana` bakea provisioning y dashboards en su propia imagen
+- Prometheus scrapea al servicio `app` dentro de la red interna default de Compose
 
 ## Monitoreo técnico Fase 1
 
@@ -89,16 +91,16 @@ La base de monitoreo técnico usa:
 
 ### Levantar monitoreo local
 
-1. Copiar variables de entorno de Compose:
+1. Crear o completar `.env`:
 
 ```bash
-cp .env.compose.example .env.compose
+cp .env.example .env
 ```
 
 2. Levantar API, Prometheus y Grafana:
 
 ```bash
-docker compose -f docker-compose.monitoring.yml up --build
+docker compose up --build
 ```
 
 3. Abrir Grafana en `http://localhost:3000` con:
@@ -175,7 +177,7 @@ exitosos a `forecast`, con menor proporción de `wells`, `403` y `404`.
 
 ### Ejecutar el traffic generator en contenedor
 
-Esta primera versión no forma parte del compose principal y se mantiene
+Esta primera versión no forma parte del stack principal y se mantiene
 desacoplada de la API.
 
 Build de la imagen:
@@ -218,16 +220,26 @@ Estas métricas describen el proceso instrumentado y no el host completo ni el c
 ## Estructura del proyecto
 
 ```
+docker-compose.yml       # Stack local canonico: app + prometheus + grafana
+prometheus/
+├── Dockerfile           # Imagen de Prometheus con config bakeada
+└── prometheus.yml       # Config de scrape sobre la API
+grafana/
+├── Dockerfile           # Imagen de Grafana con provisioning y dashboard
+├── dashboards/
+└── provisioning/
 app/
 ├── __init__.py          # Paquete principal
 ├── main.py              # Punto de entrada de FastAPI y registro de routers
-├── middleware.py         # Middleware global (validación de API key)
+├── middleware.py        # Middleware global (validación de API key)
 ├── forecast/
 │   ├── __init__.py      # Exporta el router de pronóstico
 │   └── routes.py        # Endpoints de pronóstico de producción
 └── wells/
     ├── __init__.py      # Exporta el router de pozos
     └── routes.py        # Endpoints de consulta de pozos
+load/
+└── Dockerfile           # Traffic generator desacoplado del stack principal
 ```
 
 ## Autenticación
