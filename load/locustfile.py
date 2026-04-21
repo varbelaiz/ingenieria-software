@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 from threading import Lock
+from typing import Any
 
 from locust import HttpUser, constant, events, task
 
@@ -38,15 +39,14 @@ except ModuleNotFoundError:
 API_KEY = resolve_api_key()
 SEED_SCENARIOS = build_seed_scenarios(API_KEY)
 _SEED_LOCK = Lock()
-_SEED_COMPLETED = False
+_SEED_STATE: dict[str, bool] = {"completed": False}
 
 
 @events.test_start.add_listener
-def reset_seed_state(environment, **kwargs) -> None:
+def reset_seed_state(environment: Any, **kwargs: Any) -> None:
     """Reset one-time monitoring seed state between Locust test runs."""
     del environment, kwargs
-    global _SEED_COMPLETED
-    _SEED_COMPLETED = False
+    _SEED_STATE["completed"] = False
 
 
 def _request_name(scenario_name: str, path: str) -> str:
@@ -67,7 +67,7 @@ def _build_failure_message(
     )
 
 
-def _perform_scenario(client, scenario: Scenario) -> None:
+def _perform_scenario(client: Any, scenario: Scenario) -> None:
     """Execute one GET request and validate the expected status code."""
     with client.get(
         scenario.path,
@@ -90,31 +90,29 @@ def _perform_scenario(client, scenario: Scenario) -> None:
         )
 
 
-def _seed_monitoring_once(client) -> None:
+def _seed_monitoring_once(client: Any) -> None:
     """Generate a short deterministic burst so dashboard error panels appear."""
-    global _SEED_COMPLETED
-
-    if _SEED_COMPLETED:
+    if _SEED_STATE["completed"]:
         return
 
     with _SEED_LOCK:
-        if _SEED_COMPLETED:
+        if _SEED_STATE["completed"]:
             return
 
         for scenario in SEED_SCENARIOS:
             _perform_scenario(client, scenario)
 
-        _SEED_COMPLETED = True
+        _SEED_STATE["completed"] = True
 
 
-def _call_wells_ok(client) -> None:
+def _call_wells_ok(client: Any) -> None:
     _perform_scenario(
         client,
         SEED_SCENARIOS[0],
     )
 
 
-def _call_forecast_ok(client) -> None:
+def _call_forecast_ok(client: Any) -> None:
     _perform_scenario(
         client,
         Scenario(
@@ -131,14 +129,14 @@ def _call_forecast_ok(client) -> None:
     )
 
 
-def _call_forbidden_key(client) -> None:
+def _call_forbidden_key(client: Any) -> None:
     _perform_scenario(
         client,
         SEED_SCENARIOS[2],
     )
 
 
-def _call_forecast_not_found(client) -> None:
+def _call_forecast_not_found(client: Any) -> None:
     _perform_scenario(
         client,
         SEED_SCENARIOS[3],
@@ -153,6 +151,7 @@ class BaseTrafficUser(HttpUser):
     wait_time = constant(DEFAULT_WAIT_TIME_SECONDS)
 
     def on_start(self) -> None:
+        """Populate the monitoring seed once before this user starts looping."""
         _seed_monitoring_once(self.client)
 
 
@@ -161,16 +160,20 @@ class MonitoringTrafficUser(BaseTrafficUser):
 
     @task(TRAFFIC_WEIGHTS["forecast_ok"])
     def forecast_ok(self) -> None:
+        """Request a valid forecast for a random well."""
         _call_forecast_ok(self.client)
 
     @task(TRAFFIC_WEIGHTS["wells_ok"])
     def wells_ok(self) -> None:
+        """Request the well listing with a valid API key."""
         _call_wells_ok(self.client)
 
     @task(TRAFFIC_WEIGHTS["forbidden_key"])
     def forbidden_key(self) -> None:
+        """Exercise the expected 403 path with an invalid API key."""
         _call_forbidden_key(self.client)
 
     @task(TRAFFIC_WEIGHTS["forecast_not_found"])
     def forecast_not_found(self) -> None:
+        """Exercise the expected 404 path for an unknown well."""
         _call_forecast_not_found(self.client)
