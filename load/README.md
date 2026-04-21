@@ -1,66 +1,63 @@
-# Synthetic Traffic with Locust
+# Tráfico Sintético con Locust
 
-This directory contains the synthetic traffic runner used to populate the
-monitoring dashboard and exercise the API without coupling load generation to
-the FastAPI runtime. The recommended runtime is a dedicated Docker container
-that stays separate from `docker compose up --build`.
+Este directorio contiene el runner de tráfico sintético usado para poblar el
+dashboard de monitoreo y exigir la API sin acoplar la generación de carga al
+runtime de FastAPI.
 
-## Presets
+La forma recomendada de uso es un contenedor Docker separado del stack
+principal. Por diseño, Locust no forma parte de `docker compose up --build`.
 
-This runner exposes three presets through native Locust config files:
+## Qué hay en este directorio
 
-- `ui`
-  - Opens the web UI on `http://127.0.0.1:8089`
-  - Intended for manual exploration from the browser
-- `normal`
-  - Light/normal traffic to populate monitoring and validate the app
-- `intense`
-  - Moderately aggressive traffic to push the app harder without being a
-    destructive stress test by default
+- `load/locustfile.py`: define el comportamiento del tráfico.
+- `load/traffic_config.py`: helpers de configuración compartidos.
+- `load/config/`: presets nativos de Locust (`ui`, `normal`, `intense`).
+- `load/env/`: archivos de ejemplo para targets locales y remotos.
 
-All presets share the same traffic model:
+## Variables y archivos de entorno
 
-- a short deterministic seed at test start so `200`, `403` and `404` series
-  appear in monitoring
-- then a weighted random mix where successful forecast traffic dominates
+Copiá el ejemplo que corresponda a tu escenario antes de ejecutar Locust:
 
-## Environment files
+- `load/env/local.docker.env.example`: pensado para una API local levantada con Docker en `http://host.docker.internal:8000`.
+- `load/env/aws.env.example`: pensado para una API remota o desplegada cerca de AWS.
 
-Copy the example that matches your target and edit it before running Locust:
+Variables documentadas:
 
-- `load/env/local.docker.env.example`
-  - Uses `http://host.docker.internal:8000` for a local API started with Docker
-- `load/env/aws.env.example`
-  - Points to a remote API URL and is intended for a container running near AWS
+- `LOCUST_HOST`: base URL de la API objetivo.
+- `API_KEY`: API key válida para requests exitosos.
 
-Documented variables:
+## Workflow local recomendado
 
-- `LOCUST_HOST`
-  - Base URL of the API under test
-- `API_KEY`
-  - Valid API key used for successful requests
-
-## Recommended local workflow
-
-Start the main stack first:
+1. Levantar primero el stack principal:
 
 ```bash
 docker compose up --build
 ```
 
-Build the standalone Locust image:
+2. Construir la imagen de Locust:
 
 ```bash
 docker build -t forecast-traffic ./load
 ```
 
-Create a local env file once:
+3. Crear el archivo de entorno local una única vez:
 
 ```bash
 cp load/env/local.docker.env.example load/env/local.docker.env
 ```
 
-### UI preset
+4. Ejecutar uno de los presets disponibles.
+
+## Presets disponibles
+
+Todos los presets comparten el mismo modelo de tráfico:
+
+- una siembra corta al inicio para forzar respuestas `200`, `403` y `404`
+- luego un mix ponderado donde predominan las requests exitosas a `forecast`
+
+### Preset `ui`
+
+Abre la interfaz web de Locust para exploración manual desde el navegador.
 
 ```bash
 docker run --rm \
@@ -70,9 +67,15 @@ docker run --rm \
   --config /load/config/ui.conf
 ```
 
-Open `http://127.0.0.1:8089` in the browser and start the run from the UI.
+Luego abrir:
 
-### `normal` preset
+```text
+http://127.0.0.1:8089
+```
+
+### Preset `normal`
+
+Genera tráfico liviano para poblar el monitoreo y validar comportamiento base.
 
 ```bash
 docker run --rm \
@@ -81,7 +84,10 @@ docker run --rm \
   --config /load/config/normal.conf
 ```
 
-### `intense` preset
+### Preset `intense`
+
+Genera tráfico más agresivo para exigir más a la aplicación sin convertirlo,
+por defecto, en una prueba destructiva.
 
 ```bash
 docker run --rm \
@@ -90,24 +96,29 @@ docker run --rm \
   --config /load/config/intense.conf
 ```
 
-## AWS guidance
+## Cuándo correr Locust cerca de AWS
 
-Use the same container and presets in both places, but choose the execution
-site based on the goal:
+Ejecutarlo localmente está bien para:
 
-- Local laptop:
-  - best for smoke tests, demos and manual exploration from the browser
-- Container near the API in AWS:
-  - better for more representative latency, heavier traffic and private APIs in
-    a VPC
+- smoke tests
+- demos
+- exploración manual de la UI
+- poblar el dashboard de monitoreo rápidamente
 
-To prepare a remote target:
+Si la API corre en AWS, conviene ejecutar el contenedor de Locust cerca del
+servicio cuando quieras:
+
+- latencia más representativa
+- mayor capacidad de carga
+- acceso a APIs privadas dentro de una VPC
+
+Preparación del target remoto:
 
 ```bash
 cp load/env/aws.env.example load/env/aws.env
 ```
 
-Then run the container wherever it has network access to the API:
+Ejemplo de ejecución:
 
 ```bash
 docker run --rm \
@@ -116,13 +127,13 @@ docker run --rm \
   --config /load/config/intense.conf
 ```
 
-## Host-local fallback
+## Alternativa host-local sin Docker
 
-Docker is the recommended runtime for Locust. If you need to run it directly on
-the host, keep the same presets and pass the API host through the shell:
+Docker es el runtime recomendado. Si necesitás correr Locust directamente desde
+el host, podés usar la instalación del proyecto y mantener los mismos presets:
 
 ```bash
 LOCUST_HOST=http://127.0.0.1:8000 \
 API_KEY=api_key \
-locust -f load/locustfile.py --config load/config/ui.conf
+uv run locust -f load/locustfile.py --config load/config/ui.conf
 ```

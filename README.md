@@ -1,15 +1,31 @@
 # Plataforma Predictiva de Producción de Hidrocarburos
 
-Sistema para pronosticar la producción futura de hidrocarburos, reduciendo la incertidumbre en la planificación operativa mediante modelos predictivos y una API REST para consulta e integración.
+API REST para consultar pozos disponibles y generar pronósticos mock de producción.
+El repositorio también incluye una base de monitoreo técnico con Prometheus y Grafana,
+y un runner separado de tráfico sintético con Locust.
+
+## Qué resuelve y stack principal
+
+Este proyecto centraliza una API simple para exponer información operativa y
+proveer un punto de integración para pruebas, monitoreo y validaciones locales.
+
+Stack principal:
+
+- FastAPI para la API REST
+- Python 3.10+ y [uv](https://docs.astral.sh/uv/) para entorno y dependencias
+- Docker Compose para levantar el stack local
+- Prometheus y Grafana para monitoreo técnico
+- Locust para tráfico sintético, documentado en [`load/README.md`](load/README.md)
 
 ## Requisitos
 
-- Python 3.10+
-- [UV](https://docs.astral.sh/uv/) como package manager
+- Python 3.10 o superior
+- [uv](https://docs.astral.sh/uv/)
+- Docker y Docker Compose para el stack completo de monitoreo
 
-## Setup local
+## Inicio rápido local con `uv`
 
-1. Clonar el repositorio:
+1. Clonar el repositorio y entrar al directorio del proyecto:
 
 ```bash
 git clone <repo-url>
@@ -22,38 +38,37 @@ cd ingenieria-software
 uv sync
 ```
 
-3. Configurar variables de entorno:
+3. Crear el archivo de entorno local:
 
 ```bash
 cp .env.example .env
 ```
 
-Editar `.env` con los valores correspondientes:
+`.env.example` ya trae valores útiles para desarrollo local:
 
-```
+```env
 API_KEY=api_key
 GF_SECURITY_ADMIN_USER=admin
 GF_SECURITY_ADMIN_PASSWORD=admin
 ```
 
-4. Ejecutar el servidor:
+4. Levantar la API en modo desarrollo:
 
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-## Setup local con Docker Compose
+Puntos de acceso útiles:
 
-Para levantar la API, Prometheus y Grafana con un solo comando en un stack local
-mas cercano al runtime de cloud:
+- API: `http://localhost:8000`
+- Documentación interactiva: `http://localhost:8000/docs`
+- OpenAPI: `http://localhost:8000/openapi.json`
+- Health check: `http://localhost:8000/healthz`
+- Métricas: `http://localhost:8000/metrics`
 
-1. Crear o completar `.env`:
+## Inicio rápido con Docker Compose
 
-```bash
-cp .env.example .env
-```
-
-2. Levantar el stack completo:
+Con el mismo archivo `.env`, podés levantar la API junto con Prometheus y Grafana:
 
 ```bash
 docker compose up --build
@@ -62,281 +77,84 @@ docker compose up --build
 Servicios disponibles:
 
 - API: `http://localhost:8000`
-- Health: `http://localhost:8000/healthz`
-- Metrics: `http://localhost:8000/metrics`
+- Documentación interactiva: `http://localhost:8000/docs`
+- Health check: `http://localhost:8000/healthz`
+- Métricas: `http://localhost:8000/metrics`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
 
-Este compose usa una imagen independiente por unidad:
-
-- `app` corre standalone, sin bind mounts ni `--reload`
-- `prometheus` bakea `prometheus/prometheus.yml` en su propia imagen
-- `grafana` bakea provisioning y dashboards en su propia imagen
-- Prometheus scrapea al servicio `app` dentro de la red interna default de Compose
-
-## Monitoreo técnico Fase 1
-
-La base de monitoreo técnico usa:
-
-- `/healthz` expuesto por la API para health checks de infraestructura
-- `/metrics` expuesto por la API en formato Prometheus
-- Prometheus local para scrappear métricas de la API
-- Grafana provisionado con un dashboard inicial de Fase 1
-
-### Métricas cubiertas
-
-- Estado de scrape de Prometheus sobre la API (`up`)
-- Latencia de requests exitosos del endpoint `GET /api/v1/forecast`
-- Tasa de errores HTTP (`4xx/5xx`)
-- Frecuencia de requests a la API
-- Uso de recursos del proceso Python expuesto en `/metrics`
-
-### Levantar monitoreo local
-
-1. Crear o completar `.env`:
-
-```bash
-cp .env.example .env
-```
-
-2. Levantar API, Prometheus y Grafana:
-
-```bash
-docker compose up --build
-```
-
-3. Abrir Grafana en `http://localhost:3000` con:
+Credenciales iniciales de Grafana:
 
 ```text
 usuario: admin
 password: admin
 ```
 
-4. Abrir el dashboard provisionado:
+Notas del stack local:
+
+- `app` corre como servicio independiente dentro de Compose
+- `prometheus` usa la configuración bakeada en `prometheus/prometheus.yml`
+- `grafana` se levanta con datasource y dashboard provisionados
+- Locust no forma parte de `docker compose up --build`; se ejecuta por separado
+
+## Testing y calidad
+
+Comandos útiles para validar el proyecto localmente:
+
+```bash
+uv run pytest
+uv run pytest --cov=app --cov-report=term-missing
+uv run pre-commit run --all-files
+```
+
+La pipeline de CI ejecuta tests y hooks de `pre-commit` con esta misma base.
+
+## Estructura resumida del proyecto
 
 ```text
-Fase 1 / Fase 1 - Technical Monitoring
-```
-
-### Generar tráfico de prueba
-
-El stack principal se sigue levantando con un solo comando:
-
-```bash
-docker compose up --build
-```
-
-`locust` no forma parte de ese compose. Se ejecuta aparte, en un contenedor
-dedicado, para poblar el dashboard o exigir la API solamente cuando se quiere
-testear.
-
-La imagen se construye una vez:
-
-```bash
-docker build -t forecast-traffic ./load
-```
-
-Variables documentadas para `locust`:
-
-- `LOCUST_HOST`
-- `API_KEY`
-
-Antes del primer uso local, crear el env file dedicado:
-
-```bash
-cp load/env/local.docker.env.example load/env/local.docker.env
-```
-
-El runner usa tres presets:
-
-- `ui`: abre la interfaz web de Locust para explorar manualmente desde el navegador
-- `normal`: genera tráfico liviano/normal para poblar monitoreo y validar comportamiento
-- `intense`: genera tráfico moderadamente agresivo para exigir más a la app
-
-Todos comparten el mismo modelo de tráfico:
-
-- una siembra corta al inicio del run para garantizar requests `200`, `403` y `404`
-- luego un mix ponderado aleatorio donde predominan requests exitosos a `forecast`
-
-### Preset `ui`
-
-Camino recomendado para exploración manual:
-
-```bash
-docker run --rm \
-  --env-file load/env/local.docker.env \
-  -p 8089:8089 \
-  forecast-traffic \
-  --config /load/config/ui.conf
-```
-
-Luego abrir:
-
-```text
-http://127.0.0.1:8089
-```
-
-### Preset `normal`
-
-```bash
-docker run --rm \
-  --env-file load/env/local.docker.env \
-  forecast-traffic \
-  --config /load/config/normal.conf
-```
-
-### Preset `intense`
-
-```bash
-docker run --rm \
-  --env-file load/env/local.docker.env \
-  forecast-traffic \
-  --config /load/config/intense.conf
-```
-
-### Cuándo correr Locust en AWS
-
-Localmente está bien para:
-
-- explorar la UI
-- hacer smoke tests
-- poblar el dashboard en demos o validaciones rápidas
-
-Si la API está en AWS, conviene correr el contenedor de `locust` cerca de la
-API cuando quieras:
-
-- una latencia más representativa
-- mayor carga
-- acceso a una API privada dentro de una VPC
-
-Preparar un env file remoto:
-
-```bash
-cp load/env/aws.env.example load/env/aws.env
-```
-
-Ejemplo de ejecución remota:
-
-```bash
-docker run --rm \
-  --env-file load/env/aws.env \
-  forecast-traffic \
-  --config /load/config/intense.conf
-```
-
-Alternativa secundaria sin Docker para Locust:
-
-```bash
-LOCUST_HOST=http://127.0.0.1:8000 \
-API_KEY=api_key \
-uv run locust -f load/locustfile.py --config load/config/ui.conf
-```
-
-### Nota sobre recursos del servicio
-
-`Prometheus Scrape Status` indica si Prometheus puede obtener métricas desde el target configurado. No equivale, por sí solo, a una validación funcional completa del servicio.
-
-`API Process Resource Usage` muestra métricas del proceso Python de la API:
-
-- memoria residente (`process_resident_memory_bytes`)
-- tasa de tiempo de CPU consumido (`rate(process_cpu_seconds_total[5m])`)
-
-Estas métricas describen el proceso instrumentado y no el host completo ni el contenedor de Docker. Si más adelante Fase 1 exige métricas de infraestructura más finas, el siguiente paso mínimo sería agregar exporters del host o contenedor, pero no es necesario para esta base.
-
-## Estructura del proyecto
-
-```
-docker-compose.yml       # Stack local canonico: app + prometheus + grafana
-prometheus/
-├── Dockerfile           # Imagen de Prometheus con config bakeada
-└── prometheus.yml       # Config de scrape sobre la API
-grafana/
-├── Dockerfile           # Imagen de Grafana con provisioning y dashboard
-├── dashboards/
-└── provisioning/
 app/
-├── __init__.py          # Paquete principal
-├── main.py              # Punto de entrada de FastAPI y registro de routers
-├── middleware.py        # Middleware global (validación de API key)
-├── forecast/
-│   ├── __init__.py      # Exporta el router de pronóstico
-│   └── routes.py        # Endpoints de pronóstico de producción
-└── wells/
-    ├── __init__.py      # Exporta el router de pozos
-    └── routes.py        # Endpoints de consulta de pozos
+├── main.py              # Entrada de FastAPI y registro de routers
+├── middleware.py        # Validación global de API key
+├── health.py            # Health check técnico
+├── monitoring.py        # Métricas Prometheus
+├── forecast/            # Endpoint de pronóstico
+└── wells/               # Endpoint de consulta de pozos
+grafana/
+├── dashboards/          # Dashboard provisionado
+└── provisioning/        # Datasource y carga automática
+prometheus/
+└── prometheus.yml       # Configuración de scrape local
 load/
-├── Dockerfile           # Imagen separada para ejecutar Locust
-├── config/              # Presets ui / normal / intense
-├── env/                 # Ejemplos de env files para local Docker y AWS
-└── locustfile.py        # Modelo de tráfico compartido por los presets
+├── config/              # Presets de Locust
+├── env/                 # Env files de ejemplo
+├── locustfile.py        # Runner de tráfico sintético
+└── README.md            # Documentación específica de Locust
+tests/                   # Suite de tests
+Dockerfile               # Imagen de la API
+docker-compose.yml       # Stack local de API + Prometheus + Grafana
+pyproject.toml           # Configuración del proyecto y dependencias
 ```
 
-## Autenticación
+Además, el repo conserva directorios auxiliares como `app/static/` y `app/dashboard/`.
 
-Los endpoints de negocio requieren el header `X-API-Key` con una clave válida.
-La clave se configura mediante la variable de entorno `API_KEY`. Si la clave es
-inválida o no se proporciona, se retorna un error `403 Forbidden`.
+## Autenticación y endpoints
 
-Excepciones técnicas sin autenticación:
+Los endpoints de negocio requieren el header `X-API-Key`. El valor esperado se
+configura con la variable de entorno `API_KEY`.
 
-- `GET /healthz` para health checks de infraestructura
-- `GET /metrics` para scrapes de Prometheus
+Endpoints principales:
 
-`/metrics` se mantiene expuesto para el stack de monitoreo local y más adelante
-puede bloquearse públicamente a nivel de ALB sin cambiar la app.
+- `GET /api/v1/wells`: devuelve la lista de pozos disponibles para una fecha.
+- `GET /api/v1/forecast`: devuelve un pronóstico mock de producción para un pozo y un rango de fechas.
+- `GET /healthz`: expone un health check técnico sin autenticación.
+- `GET /metrics`: expone métricas en formato Prometheus sin autenticación.
 
-## Endpoints
+Los endpoints `GET /api/v1/wells` y `GET /api/v1/forecast` también están
+documentados en `http://localhost:8000/docs`, que es la referencia recomendada
+para revisar parámetros, validaciones y respuestas del contrato OpenAPI.
 
-### `GET /api/v1/wells`
+## Documentación relacionada
 
-Retorna la lista de pozos disponibles para una fecha determinada.
-
-**Parámetros de query:**
-
-| Parámetro    | Tipo   | Requerido | Descripción                  |
-|--------------|--------|-----------|------------------------------|
-| `date_query` | `date` | Sí        | Fecha en formato `YYYY-MM-DD` |
-
-**Ejemplo de respuesta:**
-
-```json
-{
-  "date_query": "2026-03-23",
-  "wells": ["POZO-001", "POZO-002", "POZO-003"]
-}
-```
-
-### `GET /api/v1/forecast`
-
-Retorna un pronóstico de producción (tendencia lineal decreciente) para un pozo en un rango de fechas.
-
-**Parámetros de query:**
-
-| Parámetro    | Tipo   | Requerido | Descripción                        |
-|--------------|--------|-----------|------------------------------------|
-| `id_well`    | `str`  | Sí        | Identificador del pozo             |
-| `date_start` | `date` | Sí        | Fecha inicial en formato `YYYY-MM-DD` |
-| `date_end`   | `date` | Sí        | Fecha final en formato `YYYY-MM-DD`   |
-
-**Ejemplo de respuesta:**
-
-```json
-{
-  "id_well": "POZO-001",
-  "date_start": "2026-03-01",
-  "date_end": "2026-03-03",
-  "trend": "linear_decreasing",
-  "data": [
-    {"date": "2026-03-01", "oil_bopd": 1200.0},
-    {"date": "2026-03-02", "oil_bopd": 1192.5},
-    {"date": "2026-03-03", "oil_bopd": 1185.0}
-  ]
-}
-```
-
-**Errores posibles:**
-
-| Código | Descripción                                    |
-|--------|------------------------------------------------|
-| `404`  | Pozo no encontrado                             |
-| `400`  | `date_end` debe ser mayor o igual a `date_start` |
+- [`load/README.md`](load/README.md): uso del runner de tráfico sintético con Locust.
+- `grafana/`: dashboard y provisioning del stack de monitoreo local.
+- `prometheus/`: configuración de scrape para la API.
