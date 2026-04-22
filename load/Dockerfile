@@ -1,7 +1,17 @@
-FROM grafana/k6:0.49.0
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /load
 
-COPY traffic.js ./
+RUN pip install "locust>=2.31.0,<3.0.0"
 
-ENTRYPOINT ["k6", "run", "/load/traffic.js"]
+COPY locustfile.py traffic_config.py /load/
+COPY config /load/config
+
+EXPOSE 8089
+
+ENTRYPOINT ["locust", "-f", "/load/locustfile.py"]
+CMD ["--config", "/load/config/ui.conf"]
