@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -8,12 +8,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir uv
-RUN python -m venv /opt/venv
+COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /uvx /usr/local/bin/
 
 COPY pyproject.toml uv.lock ./
 COPY app ./app
 RUN uv sync --frozen --no-dev
+
+COPY app/ ./app/
+
+RUN adduser --disabled-password --gecos "" appuser
+USER appuser
 
 EXPOSE 8000
 
