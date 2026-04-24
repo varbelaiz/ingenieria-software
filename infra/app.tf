@@ -19,14 +19,15 @@ resource "aws_instance" "app" {
   vpc_security_group_ids = [aws_security_group.app.id]
 
   user_data = templatefile("${path.module}/user_data/app.sh.tpl", {
-    region       = var.region
-    env_name     = terraform.workspace
-    branch       = local.git_branch
-    github_org   = var.github_org
-    github_repo  = var.github_repo
-    ecr_registry = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
-    ecr_repo     = aws_ecr_repository.api.name
-    secret_name  = aws_secretsmanager_secret.api_key.name
+    region                             = var.region
+    env_name                           = terraform.workspace
+    branch                             = local.git_branch
+    github_org                         = var.github_org
+    github_repo                        = var.github_repo
+    ecr_registry                       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
+    ecr_repo                           = aws_ecr_repository.api.name
+    api_key_secret_name                = aws_secretsmanager_secret.api_key.name
+    grafana_admin_password_secret_name = aws_secretsmanager_secret.grafana_admin_password.name
   })
 
   tags = {

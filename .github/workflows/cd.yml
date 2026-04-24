@@ -102,7 +102,9 @@ jobs:
               \"cd /opt/app\",
               \"git pull\",
               \"aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}\",
+              \"AWS_REGION=${{ env.AWS_REGION }} ENVIRONMENT=$ENV_NAME ECR_REGISTRY=${{ env.ECR_REGISTRY }} ECR_REPOSITORY=api-$ENV_NAME GF_SECURITY_ADMIN_USER=admin bash scripts/write_runtime_env.sh\",
               \"docker compose -f docker-compose.prod.yml pull\",
-              \"docker compose -f docker-compose.prod.yml up -d\"
+              \"docker compose -f docker-compose.prod.yml up -d\",
+              \"bash scripts/sync_grafana_admin_password.sh\"
             ]" \
             --region ${{ env.AWS_REGION }}

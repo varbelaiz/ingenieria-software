@@ -25,3 +25,9 @@ variable "api_key" {
   type        = string
   sensitive   = true
 }
+
+variable "grafana_admin_password" {
+  description = "Grafana admin password for the monitoring stack"
+  type        = string
+  sensitive   = true
+}
