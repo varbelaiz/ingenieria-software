@@ -75,7 +75,11 @@ resource "aws_iam_role_policy" "github_actions" {
       {
         Sid      = "SSMDeploy"
         Effect   = "Allow"
-        Action   = ["ssm:SendCommand", "ssm:GetCommandInvocation"]
+        Action   = [
+          "ssm:SendCommand",
+          "ssm:GetCommandInvocation",
+          "ssm:ListCommandInvocations"
+        ]
         Resource = "*"
       }
     ]
