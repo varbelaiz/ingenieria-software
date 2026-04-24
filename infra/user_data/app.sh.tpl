@@ -21,18 +21,16 @@ aws ecr get-login-password --region ${region} | \
   docker login --username AWS --password-stdin ${ecr_registry}
 
 # ─── Runtime env (.env is gitignored, survives git pull) ─────────────────────
-API_KEY=$(aws secretsmanager get-secret-value \
-  --secret-id ${secret_name} \
-  --region ${region} \
-  --query SecretString \
-  --output text)
-
-cat > /opt/app/.env <<ENVFILE
-ECR_REGISTRY=${ecr_registry}
-ECR_REPOSITORY=${ecr_repo}
-ENVIRONMENT=${env_name}
-API_KEY=$API_KEY
-ENVFILE
+AWS_REGION=${region} \
+ENVIRONMENT=${env_name} \
+ECR_REGISTRY=${ecr_registry} \
+ECR_REPOSITORY=${ecr_repo} \
+API_KEY_SECRET_NAME=${api_key_secret_name} \
+GRAFANA_ADMIN_PASSWORD_SECRET_NAME=${grafana_admin_password_secret_name} \
+GF_SECURITY_ADMIN_USER=admin \
+ENV_FILE=/opt/app/.env \
+bash scripts/write_runtime_env.sh
 
 # ─── Stack ───────────────────────────────────────────────────────────────────
 docker compose -f docker-compose.prod.yml up -d
+bash scripts/sync_grafana_admin_password.sh

@@ -44,12 +44,12 @@ uv sync
 cp .env.example .env
 ```
 
-`.env.example` ya trae valores útiles para desarrollo local:
+`.env.example` trae valores base para desarrollo local. Completá la contraseña de Grafana en tu `.env`; ese archivo está ignorado por git y no debe commitearse.
 
 ```env
 API_KEY=api_key
 GF_SECURITY_ADMIN_USER=admin
-GF_SECURITY_ADMIN_PASSWORD=admin
+GF_SECURITY_ADMIN_PASSWORD=<tu-password-local>
 ```
 
 4. Levantar la API en modo desarrollo:
@@ -83,16 +83,16 @@ Servicios disponibles:
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
 
-Credenciales iniciales de Grafana:
+Credenciales locales de Grafana:
 
 ```text
 usuario: admin
-password: admin
+password: el valor de GF_SECURITY_ADMIN_PASSWORD en tu .env
 ```
 
 Notas del stack local:
 
-- `app` corre como servicio independiente dentro de Compose
+- `api` corre como servicio independiente dentro de Compose
 - `prometheus` usa la configuración bakeada en `prometheus/prometheus.yml`
 - `grafana` se levanta con datasource y dashboard provisionados
 - Locust no forma parte de `docker compose up --build`; se ejecuta por separado
@@ -108,6 +108,17 @@ uv run pre-commit run --all-files
 ```
 
 La pipeline de CI ejecuta tests y hooks de `pre-commit` con esta misma base.
+
+## Deploy y secretos
+
+Terraform crea secretos por ambiente en AWS Secrets Manager para `API_KEY` y la
+contraseña admin de Grafana. Pasalos como variables sensibles, por ejemplo con
+`TF_VAR_api_key` y `TF_VAR_grafana_admin_password`, sin commitear valores reales.
+
+En cada deploy, la EC2 regenera `/opt/app/.env` desde Secrets Manager antes de
+levantar el stack. Grafana usa `GF_SECURITY_ADMIN_USER=admin` y
+`GF_SECURITY_ADMIN_PASSWORD` desde ese archivo; si el volumen ya existía, el
+deploy también resincroniza la contraseña del usuario admin dentro del contenedor.
 
 ## Estructura resumida del proyecto
 

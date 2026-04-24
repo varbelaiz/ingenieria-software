@@ -129,7 +129,10 @@ resource "aws_iam_role_policy" "app" {
         Sid      = "SecretsManagerRead"
         Effect   = "Allow"
         Action   = "secretsmanager:GetSecretValue"
-        Resource = aws_secretsmanager_secret.api_key.arn
+        Resource = [
+          aws_secretsmanager_secret.api_key.arn,
+          aws_secretsmanager_secret.grafana_admin_password.arn
+        ]
       }
     ]
   })
