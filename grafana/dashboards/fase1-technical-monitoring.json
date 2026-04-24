@@ -61,14 +61,12 @@
               }
             ]
           },
-          "unit": "none",
-          "min": 0,
-          "max": 1
+          "unit": "none"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 6,
         "x": 0,
         "y": 0
@@ -120,28 +118,29 @@
               },
               {
                 "color": "yellow",
-                "value": 0.005
+                "value": 0.25
               },
               {
                 "color": "red",
-                "value": 0.01
+                "value": 0.5
               }
             ]
           },
-          "unit": "s",
-          "min": 0,
-          "max": 0.01
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 6,
         "x": 6,
         "y": 0
       },
       "id": 2,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -150,8 +149,7 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "textMode": "auto"
       },
       "targets": [
         {
@@ -163,7 +161,7 @@
         }
       ],
       "title": "Forecast Success Latency P95",
-      "type": "gauge"
+      "type": "stat"
     },
     {
       "datasource": {
@@ -185,22 +183,20 @@
               },
               {
                 "color": "yellow",
-                "value": 0.01
+                "value": 1
               },
               {
                 "color": "red",
-                "value": 0.05
+                "value": 5
               }
             ]
           },
-          "unit": "percentunit",
-          "min": 0,
-          "max": 0.1
+          "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 6,
         "x": 12,
         "y": 0
@@ -252,14 +248,12 @@
               }
             ]
           },
-          "unit": "reqps",
-          "min": 0,
-          "max": 5
+          "unit": "reqps"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 6,
         "x": 18,
         "y": 0
@@ -333,9 +327,7 @@
               "mode": "off"
             }
           },
-          "unit": "s",
-          "min": 0,
-          "max": 0.01
+          "unit": "s"
         },
         "overrides": [
           {
@@ -365,10 +357,10 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 5
       },
       "id": 5,
       "options": {
@@ -444,9 +436,7 @@
               "mode": "off"
             }
           },
-          "unit": "reqps",
-          "min": 0,
-          "max": 5
+          "unit": "reqps"
         },
         "overrides": [
           {
@@ -476,10 +466,10 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 5
       },
       "id": 6,
       "options": {
@@ -548,9 +538,7 @@
               "mode": "off"
             }
           },
-          "unit": "percentunit",
-          "min": 0,
-          "max": 0.1
+          "unit": "percentunit"
         },
         "overrides": [
           {
@@ -580,10 +568,10 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 13
       },
       "id": 7,
       "options": {
@@ -652,8 +640,7 @@
               "mode": "off"
             }
           },
-          "unit": "bytes",
-          "min": 0
+          "unit": "bytes"
         },
         "overrides": [
           {
@@ -691,10 +678,10 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 13
       },
       "id": 8,
       "options": {

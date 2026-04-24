@@ -94,11 +94,8 @@ jobs:
 
       - name: Send deploy command via SSM
         run: |
-          set -euo pipefail
-
           ENV_NAME=${{ needs.changes.outputs.env_name }}
-
-          COMMAND_ID=$(aws ssm send-command \
+          aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --targets "Key=tag:Name,Values=app-$ENV_NAME" \
             --parameters commands="[
@@ -107,47 +104,7 @@ jobs:
               \"aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}\",
               \"AWS_REGION=${{ env.AWS_REGION }} ENVIRONMENT=$ENV_NAME ECR_REGISTRY=${{ env.ECR_REGISTRY }} ECR_REPOSITORY=api-$ENV_NAME GF_SECURITY_ADMIN_USER=admin bash scripts/write_runtime_env.sh\",
               \"docker compose -f docker-compose.prod.yml pull\",
-              \"docker compose -f docker-compose.prod.yml up -d --force-recreate\",
+              \"docker compose -f docker-compose.prod.yml up -d\",
               \"bash scripts/sync_grafana_admin_password.sh\"
             ]" \
-            --region ${{ env.AWS_REGION }} \
-            --query "Command.CommandId" \
-            --output text)
-
-          echo "Sent SSM command $COMMAND_ID"
-
-          for attempt in {1..60}; do
-            STATUS=$(aws ssm list-command-invocations \
-              --command-id "$COMMAND_ID" \
-              --details \
-              --region ${{ env.AWS_REGION }} \
-              --query "CommandInvocations[0].Status" \
-              --output text)
-
-            case "$STATUS" in
-              Success)
-                aws ssm list-command-invocations \
-                  --command-id "$COMMAND_ID" \
-                  --details \
-                  --region ${{ env.AWS_REGION }} \
-                  --query "CommandInvocations[0].CommandPlugins[0].Output" \
-                  --output text
-                exit 0
-                ;;
-              Failed|Cancelled|TimedOut|Cancelling)
-                aws ssm list-command-invocations \
-                  --command-id "$COMMAND_ID" \
-                  --details \
-                  --region ${{ env.AWS_REGION }} \
-                  --query "CommandInvocations[0].CommandPlugins[0].Output" \
-                  --output text
-                exit 1
-                ;;
-            esac
-
-            echo "SSM command status: $STATUS (attempt $attempt/60)"
-            sleep 5
-          done
-
-          echo "SSM command $COMMAND_ID did not finish in time"
-          exit 1
+            --region ${{ env.AWS_REGION }}
