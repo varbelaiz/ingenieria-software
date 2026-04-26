@@ -61,14 +61,12 @@
               }
             ]
           },
-          "unit": "none",
-          "min": 0,
-          "max": 1
+          "unit": "none"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 6,
         "x": 0,
         "y": 0
@@ -120,28 +118,29 @@
               },
               {
                 "color": "yellow",
-                "value": 10
+                "value": 0.25
               },
               {
                 "color": "red",
-                "value": 25
+                "value": 0.5
               }
             ]
           },
-          "unit": "ms",
-          "min": 0,
-          "max": 50
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 6,
         "x": 6,
         "y": 0
       },
       "id": 2,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -150,8 +149,7 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true
+        "textMode": "auto"
       },
       "targets": [
         {
@@ -162,8 +160,8 @@
           "refId": "A"
         }
       ],
-      "title": "Forecast P95 Latency (ms)",
-      "type": "gauge"
+      "title": "Forecast Success Latency P95",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -185,22 +183,20 @@
               },
               {
                 "color": "yellow",
-                "value": 0.05
+                "value": 1
               },
               {
                 "color": "red",
-                "value": 0.1
+                "value": 5
               }
             ]
           },
-          "unit": "percentunit",
-          "min": 0,
-          "max": 0.25
+          "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 6,
         "x": 12,
         "y": 0
@@ -250,13 +246,12 @@
               }
             ]
           },
-          "unit": "suffix: req/min",
-          "min": 0
+          "unit": "reqps"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 6,
         "x": 18,
         "y": 0
@@ -330,9 +325,7 @@
               "mode": "off"
             }
           },
-          "decimals": 1,
-          "unit": "ms",
-          "min": 0
+          "unit": "s"
         },
         "overrides": [
           {
@@ -362,10 +355,10 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 5
       },
       "id": 5,
       "options": {
@@ -441,9 +434,7 @@
               "mode": "off"
             }
           },
-          "decimals": 0,
-          "unit": "none",
-          "min": 0
+          "unit": "reqps"
         },
         "overrides": [
           {
@@ -473,10 +464,10 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 5
       },
       "id": 6,
       "options": {
@@ -545,10 +536,7 @@
               "mode": "off"
             }
           },
-          "decimals": 1,
-          "unit": "percentunit",
-          "min": 0,
-          "max": 0.25
+          "unit": "percentunit"
         },
         "overrides": [
           {
@@ -578,10 +566,10 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 13
       },
       "id": 7,
       "options": {
@@ -657,9 +645,7 @@
               "mode": "off"
             }
           },
-          "decimals": 1,
-          "unit": "bytes",
-          "min": 0
+          "unit": "bytes"
         },
         "overrides": [
           {
@@ -705,10 +691,10 @@
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 13
       },
       "id": 8,
       "options": {
