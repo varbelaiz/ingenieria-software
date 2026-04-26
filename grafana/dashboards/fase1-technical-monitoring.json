@@ -108,7 +108,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 2,
+          "decimals": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -154,7 +154,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m]))) * 1000",
           "legendFormat": "P95",
           "range": true,
           "refId": "A"
@@ -203,9 +203,6 @@
       },
       "id": 3,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -214,19 +211,20 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
       },
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(forecast_api_errors_total[5m])) / clamp_min(sum(rate(forecast_api_requests_total[5m])), 0.0001)",
-          "legendFormat": "HTTP error ratio",
+          "expr": "(sum(rate(forecast_api_errors_total{path!=\"/metrics\"}[5m])) or vector(0)) / scalar(clamp_min((sum(rate(forecast_api_requests_total{path!=\"/metrics\"}[5m])) or vector(0)), 0.0001))",
+          "legendFormat": "Error ratio",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "HTTP Error Ratio (4xx/5xx)",
-      "type": "stat"
+      "title": "HTTP Error Ratio (last 5m)",
+      "type": "gauge"
     },
     {
       "datasource": {
@@ -238,7 +236,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 2,
+          "decimals": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -261,7 +259,7 @@
       "id": 4,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -276,13 +274,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(forecast_api_requests_total[5m]))",
-          "legendFormat": "Requests/sec",
+          "expr": "sum(rate(forecast_api_requests_total{path!=\"/metrics\"}[5m])) * 60",
+          "legendFormat": "Requests/min",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "API Request Rate",
+      "title": "API Request Rate (last 5m)",
       "type": "stat"
     },
     {
@@ -299,7 +297,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "Latency (ms)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -312,12 +310,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 3,
-            "pointSize": 6,
+            "lineWidth": 2,
+            "pointSize": 4,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "always",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -378,20 +376,20 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m]))) * 1000",
           "legendFormat": "p50",
           "range": true,
           "refId": "A"
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(forecast_api_request_duration_seconds_bucket{path=\"/api/v1/forecast\",status_code=\"200\"}[5m]))) * 1000",
           "legendFormat": "p95",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Forecast Success Latency",
+      "title": "Forecast Latency (successful, ms)",
       "type": "timeseries"
     },
     {
@@ -408,7 +406,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "Requests / min",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -421,12 +419,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 3,
-            "pointSize": 6,
+            "lineWidth": 2,
+            "pointSize": 4,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "always",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -487,13 +485,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (path) (rate(forecast_api_requests_total{path!=\"/metrics\"}[5m]))",
+          "expr": "sum by (path) (rate(forecast_api_requests_total{path!=\"/metrics\"}[5m])) * 60",
           "legendFormat": "{{ path }}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "API Query Frequency by Endpoint",
+      "title": "API Requests by Endpoint (req/min)",
       "type": "timeseries"
     },
     {
@@ -510,7 +508,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "Error ratio",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -523,12 +521,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 3,
-            "pointSize": 6,
+            "lineWidth": 2,
+            "pointSize": 4,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "always",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -544,24 +542,24 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "403"
+              "options": "4xx client errors"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "403 Forbidden"
+                "value": "4xx client errors"
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "404"
+              "options": "5xx server errors"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "404 Not Found"
+                "value": "5xx server errors"
               }
             ]
           }
@@ -589,13 +587,20 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (status_code) (increase(forecast_api_requests_total{status_code=~\"4..|5..\",path!=\"/metrics\"}[5m])) / scalar(clamp_min(sum(increase(forecast_api_requests_total{path!=\"/metrics\"}[5m])), 1))",
-          "legendFormat": "{{ status_code }}",
+          "expr": "(sum(increase(forecast_api_requests_total{status_code=~\"4..\",path!=\"/metrics\"}[5m])) or vector(0)) / scalar(clamp_min((sum(increase(forecast_api_requests_total{path!=\"/metrics\"}[5m])) or vector(0)), 1))",
+          "legendFormat": "4xx client errors",
           "range": true,
           "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "(sum(increase(forecast_api_requests_total{status_code=~\"5..\",path!=\"/metrics\"}[5m])) or vector(0)) / scalar(clamp_min((sum(increase(forecast_api_requests_total{path!=\"/metrics\"}[5m])) or vector(0)), 1))",
+          "legendFormat": "5xx server errors",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "HTTP Error Ratio by Status (4xx/5xx)",
+      "title": "HTTP Error Ratio by Class (4xx/5xx)",
       "type": "timeseries"
     },
     {
@@ -612,7 +617,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "Memory (RSS)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -651,15 +656,23 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "short"
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 2
               },
               {
                 "id": "custom.axisPlacement",
                 "value": "right"
               },
               {
+                "id": "custom.axisLabel",
+                "value": "CPU (% of 1 core)"
+              },
+              {
                 "id": "displayName",
-                "value": "CPU usage rate"
+                "value": "CPU usage (% of 1 core)"
               }
             ]
           },
