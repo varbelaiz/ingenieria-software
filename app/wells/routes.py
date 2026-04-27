@@ -14,10 +14,7 @@ router = APIRouter(
 @router.get("/wells")
 def get_wells(
     date_query: date = Query(..., description="Fecha en formato YYYY-MM-DD")
-) -> dict[str, object]:
+) -> list[dict[str, str]]:
     """Return the available mock wells for the requested date."""
     wells = ["POZO-001", "POZO-002", "POZO-003"]
-    return {
-        "date_query": date_query.isoformat(),
-        "wells": wells,
-    }
+    return [{"id_well": well_id} for well_id in wells]
