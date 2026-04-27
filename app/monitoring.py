@@ -224,3 +224,62 @@ def metrics() -> PlainTextResponse:
         content="\n".join(_prometheus_lines()) + "\n",
         media_type=METRICS_CONTENT_TYPE,
     )
+
+
+class PrometheusMetricsAdapter:
+    """Adapter to expose Prometheus metrics as MetricsProvider for alerts."""
+
+    def get_average_latency(self) -> float | None:
+        """
+        Get average request latency in seconds.
+
+        Calculates average across all recorded requests.
+        Returns None if no requests have been recorded.
+        """
+        with _LOCK:
+            total_count = sum(_REQUEST_DURATION_COUNT.values())
+            total_sum = sum(_REQUEST_DURATION_SUM.values())
+
+            if total_count == 0:
+                return None
+
+            return total_sum / total_count
+
+    def get_error_rate(self) -> float | None:
+        """
+        Get error rate as a decimal (e.g., 0.05 for 5%).
+
+        Calculates error_count / total_requests across all endpoints.
+        Returns None if no requests have been recorded.
+        """
+        with _LOCK:
+            total_requests = sum(_REQUEST_COUNT.values())
+            total_errors = sum(_ERROR_COUNT.values())
+
+            if total_requests == 0:
+                return None
+
+            return total_errors / total_requests
+
+    def get_request_count_last_seconds(self, seconds: int = 30) -> int:
+        """
+        Get number of requests in the last N seconds.
+
+        NOTE: Current implementation doesn't track per-second timestamps.
+        This returns all requests (assuming all are "recent" for MVP).
+        In production, would need per-request timestamps to window properly.
+
+        Args:
+            seconds: Time window in seconds (default 30)
+
+        Returns:
+            Number of requests in window
+        """
+        with _LOCK:
+            # MVP: Return total count. In production, track per-request
+            # timestamps and filter by time window.
+            return int(sum(_REQUEST_COUNT.values()))
+
+
+# Global singleton adapter instance
+metrics_adapter = PrometheusMetricsAdapter()
