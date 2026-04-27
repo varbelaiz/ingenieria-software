@@ -3,15 +3,29 @@
 from __future__ import annotations
 
 import os
-import resource
+import sys
 import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from time import perf_counter, time
-from typing import Iterable
+from typing import Iterable, NamedTuple
 
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
+
+# Import resource module only on UNIX-like systems (not available on Windows)
+if sys.platform != "win32":
+    import resource
+else:
+    resource = None  # type: ignore
+
+
+class ResourceUsage(NamedTuple):
+    """Fallback resource usage structure for Windows compatibility."""
+
+    ru_maxrss: int
+    ru_utime: float
+    ru_stime: float
 
 REQUEST_DURATION_BUCKETS = (
     0.005,
@@ -181,9 +195,15 @@ def _prometheus_lines() -> list[str]:
 
 def _process_metric_lines() -> Iterable[str]:
     """Expose lightweight process metrics without external dependencies."""
-    usage = resource.getrusage(resource.RUSAGE_SELF)
-    resident_memory_bytes = _resident_memory_bytes(usage.ru_maxrss)
-    cpu_seconds = usage.ru_utime + usage.ru_stime
+    if resource is not None:
+        # On UNIX-like systems, use the resource module
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        resident_memory_bytes = _resident_memory_bytes(usage.ru_maxrss)
+        cpu_seconds = usage.ru_utime + usage.ru_stime
+    else:
+        # On Windows or systems without resource module, use default values
+        resident_memory_bytes = 0
+        cpu_seconds = 0.0
 
     return [
         "# HELP process_resident_memory_bytes Resident memory size in bytes.",
@@ -211,7 +231,18 @@ def _process_metric_lines() -> Iterable[str]:
 
 
 def _resident_memory_bytes(ru_maxrss: int) -> int:
-    """Normalize ru_maxrss across macOS and Linux."""
+    """Normalize ru_maxrss across macOS and Linux.
+
+    Args:
+        ru_maxrss: Maximum resident set size from resource.getrusage()
+
+    Returns:
+        Memory size in bytes
+    """
+    if ru_maxrss == 0:
+        return 0
+    # On macOS, ru_maxrss is already in bytes
+    # On Linux, ru_maxrss is in kilobytes
     if os.name == "posix" and os.uname().sysname == "Darwin":
         return ru_maxrss
     return ru_maxrss * 1024
