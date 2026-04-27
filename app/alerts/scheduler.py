@@ -1,7 +1,7 @@
 """Alert scheduler for periodic checking and notification."""
 
 import logging
-from typing import Optional
+
 from app.alerts.models import AlertConfig, AlertEvent
 from app.alerts.notifiers import Notifier
 from app.alerts.detectors import AlertDetector, MetricsProvider
@@ -32,9 +32,7 @@ class AlertScheduler:
         self.config = config
         self.notifier = notifier
         self.detectors = detectors
-        self.deduplicator = AlertDeduplicator(
-            dedup_window_seconds=dedup_window_seconds
-        )
+        self.deduplicator = AlertDeduplicator(dedup_window_seconds=dedup_window_seconds)
 
     async def check_alerts(self, metrics: MetricsProvider) -> None:
         """
@@ -57,20 +55,19 @@ class AlertScheduler:
 
                 # Check if alert should be notified (deduplication)
                 if not self.deduplicator.should_notify(alert):
-                    logger.debug(
-                        f"Alert deduplicated: {alert.alert_type.value}",
-                    )
+                    logger.debug("Alert deduplicated: %s", alert.alert_type.value)
                     continue
 
                 # Send notification
                 await self._send_alert(alert)
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error(
-                    f"Error in detector {detector.__class__.__name__}: {e}",
+                    "Error in detector %s: %s",
+                    detector.__class__.__name__,
+                    e,
                     exc_info=True,
                 )
-                # Continue to next detector
                 continue
 
         # Periodic cleanup of expired dedup entries
@@ -88,15 +85,10 @@ class AlertScheduler:
 
             if success:
                 logger.info(
-                    f"Alert sent: {alert.alert_type.value} - {alert.message}",
+                    "Alert sent: %s - %s", alert.alert_type.value, alert.message
                 )
             else:
-                logger.warning(
-                    f"Alert notification failed: {alert.alert_type.value}",
-                )
+                logger.warning("Alert notification failed: %s", alert.alert_type.value)
 
-        except Exception as e:
-            logger.error(
-                f"Exception while sending alert: {e}",
-                exc_info=True,
-            )
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error("Exception while sending alert: %s", e, exc_info=True)

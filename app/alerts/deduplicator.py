@@ -13,7 +13,8 @@ class AlertDeduplicator:
         Initialize AlertDeduplicator.
 
         Args:
-            dedup_window_seconds: Time window in seconds for deduplication (default 5 min)
+            dedup_window_seconds: Time window in seconds for deduplication
+        (default 5 min)
         """
         self.dedup_window_seconds = dedup_window_seconds
         self._alert_cache: dict[str, float] = {}

@@ -1,19 +1,23 @@
 """Tests for alert scheduler."""
 
+import inspect
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+
 from app.alerts.models import (
+    AlertConfig,
     AlertEvent,
-    AlertType,
     AlertSeverity,
     AlertStatus,
-    AlertConfig,
+    AlertType,
 )
+from app.alerts.detectors import AlertDetector
 from app.alerts.scheduler import AlertScheduler
 
 
 @pytest.fixture
-def alert_config():
+def alert_config() -> AlertConfig:
     """Create alert configuration."""
     return AlertConfig(
         latency_threshold=5.0,
@@ -23,14 +27,13 @@ def alert_config():
 
 
 @pytest.fixture
-def mock_detector():
+def mock_detector() -> MagicMock:
     """Create mock detector."""
-    detector = MagicMock()
-    return detector
+    return MagicMock()
 
 
 @pytest.fixture
-def mock_notifier():
+def mock_notifier() -> MagicMock:
     """Create mock notifier."""
     notifier = MagicMock()
     notifier.send = AsyncMock(return_value=True)
@@ -38,18 +41,19 @@ def mock_notifier():
 
 
 @pytest.fixture
-def mock_metrics():
+def mock_metrics() -> MagicMock:
     """Create mock metrics."""
-    metrics = MagicMock()
-    return metrics
+    return MagicMock()
 
 
 class TestAlertScheduler:
     """Test AlertScheduler implementation."""
 
-    def test_scheduler_creation(self, alert_config, mock_notifier):
+    def test_scheduler_creation(
+        self, alert_config: AlertConfig, mock_notifier: MagicMock
+    ) -> None:
         """Verify AlertScheduler can be instantiated."""
-        detectors = []
+        detectors: list[AlertDetector] = []
         scheduler = AlertScheduler(
             config=alert_config,
             notifier=mock_notifier,
@@ -57,9 +61,11 @@ class TestAlertScheduler:
         )
         assert isinstance(scheduler, AlertScheduler)
 
-    def test_scheduler_stores_dependencies(self, alert_config, mock_notifier):
+    def test_scheduler_stores_dependencies(
+        self, alert_config: AlertConfig, mock_notifier: MagicMock
+    ) -> None:
         """Verify AlertScheduler stores config, notifier, and detectors."""
-        detectors = []
+        detectors: list[AlertDetector] = []
         scheduler = AlertScheduler(
             config=alert_config,
             notifier=mock_notifier,
@@ -71,8 +77,11 @@ class TestAlertScheduler:
 
     @pytest.mark.asyncio
     async def test_scheduler_check_alerts_executes_detectors(
-        self, alert_config, mock_notifier, mock_metrics
-    ):
+        self,
+        alert_config: AlertConfig,
+        mock_notifier: MagicMock,
+        mock_metrics: MagicMock,
+    ) -> None:
         """Verify check_alerts executes all detectors."""
         detector1 = MagicMock()
         detector1.detect.return_value = None
@@ -87,14 +96,16 @@ class TestAlertScheduler:
 
         await scheduler.check_alerts(mock_metrics)
 
-        # Verify detectors were called
         detector1.detect.assert_called_once_with(mock_metrics)
         detector2.detect.assert_called_once_with(mock_metrics)
 
     @pytest.mark.asyncio
     async def test_scheduler_sends_alert_if_detector_triggers(
-        self, alert_config, mock_notifier, mock_metrics
-    ):
+        self,
+        alert_config: AlertConfig,
+        mock_notifier: MagicMock,
+        mock_metrics: MagicMock,
+    ) -> None:
         """Verify alert is sent if detector returns alert."""
         alert = AlertEvent(
             alert_type=AlertType.LATENCY,
@@ -114,13 +125,15 @@ class TestAlertScheduler:
 
         await scheduler.check_alerts(mock_metrics)
 
-        # Verify notifier was called with alert
         mock_notifier.send.assert_called_once_with(alert)
 
     @pytest.mark.asyncio
     async def test_scheduler_deduplicates_alerts(
-        self, alert_config, mock_notifier, mock_metrics
-    ):
+        self,
+        alert_config: AlertConfig,
+        mock_notifier: MagicMock,
+        mock_metrics: MagicMock,
+    ) -> None:
         """Verify scheduler deduplicates alerts using deduplicator."""
         alert = AlertEvent(
             alert_type=AlertType.LATENCY,
@@ -138,18 +151,19 @@ class TestAlertScheduler:
             detectors=[detector],
         )
 
-        # First check - alert should be sent
         await scheduler.check_alerts(mock_metrics)
         assert mock_notifier.send.call_count == 1
 
-        # Second check - alert should be deduped (not sent)
         await scheduler.check_alerts(mock_metrics)
-        assert mock_notifier.send.call_count == 1  # Still 1, not 2
+        assert mock_notifier.send.call_count == 1
 
     @pytest.mark.asyncio
     async def test_scheduler_does_not_send_if_detector_returns_none(
-        self, alert_config, mock_notifier, mock_metrics
-    ):
+        self,
+        alert_config: AlertConfig,
+        mock_notifier: MagicMock,
+        mock_metrics: MagicMock,
+    ) -> None:
         """Verify no alert is sent if detector returns None."""
         detector = MagicMock()
         detector.detect.return_value = None
@@ -162,13 +176,15 @@ class TestAlertScheduler:
 
         await scheduler.check_alerts(mock_metrics)
 
-        # Verify notifier was not called
         mock_notifier.send.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_scheduler_continues_if_one_detector_fails(
-        self, alert_config, mock_notifier, mock_metrics
-    ):
+        self,
+        alert_config: AlertConfig,
+        mock_notifier: MagicMock,
+        mock_metrics: MagicMock,
+    ) -> None:
         """Verify scheduler continues if one detector raises exception."""
         alert = AlertEvent(
             alert_type=AlertType.ERROR_RATE,
@@ -189,19 +205,18 @@ class TestAlertScheduler:
             detectors=[detector1, detector2],
         )
 
-        # Should not raise exception
         await scheduler.check_alerts(mock_metrics)
 
-        # Second detector should still be called
         detector2.detect.assert_called_once()
-
-        # Alert from second detector should be sent
         mock_notifier.send.assert_called_once_with(alert)
 
     @pytest.mark.asyncio
     async def test_scheduler_handles_notifier_failure(
-        self, alert_config, mock_notifier, mock_metrics
-    ):
+        self,
+        alert_config: AlertConfig,
+        mock_notifier: MagicMock,
+        mock_metrics: MagicMock,
+    ) -> None:
         """Verify scheduler handles notifier failure gracefully."""
         alert = AlertEvent(
             alert_type=AlertType.SERVICE_DOWN,
@@ -221,16 +236,14 @@ class TestAlertScheduler:
             detectors=[detector],
         )
 
-        # Should not raise exception
         await scheduler.check_alerts(mock_metrics)
 
-        # Notifier should have been called
         mock_notifier.send.assert_called_once()
 
-    def test_scheduler_has_check_alerts_async_method(self, alert_config, mock_notifier):
+    def test_scheduler_has_check_alerts_async_method(
+        self, alert_config: AlertConfig, mock_notifier: MagicMock
+    ) -> None:
         """Verify check_alerts is an async method."""
-        import inspect
-
         scheduler = AlertScheduler(
             config=alert_config,
             notifier=mock_notifier,
@@ -240,8 +253,11 @@ class TestAlertScheduler:
 
     @pytest.mark.asyncio
     async def test_scheduler_multiple_detectors_trigger(
-        self, alert_config, mock_notifier, mock_metrics
-    ):
+        self,
+        alert_config: AlertConfig,
+        mock_notifier: MagicMock,
+        mock_metrics: MagicMock,
+    ) -> None:
         """Verify scheduler sends multiple alerts from different detectors."""
         alert1 = AlertEvent(
             alert_type=AlertType.LATENCY,
@@ -270,5 +286,4 @@ class TestAlertScheduler:
 
         await scheduler.check_alerts(mock_metrics)
 
-        # Both alerts should be sent
         assert mock_notifier.send.call_count == 2

@@ -38,9 +38,7 @@ class AlertEvent:
     severity: AlertSeverity
     message: str
     status: AlertStatus
-    timestamp: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     context: Optional[dict[str, Any]] = None
 
     def unique_key(self) -> str:
@@ -60,7 +58,7 @@ class AlertConfig:
         """Validate configuration values."""
         if self.latency_threshold <= 0:
             raise ValueError("latency_threshold must be positive")
-        if not (0 <= self.error_rate_threshold <= 1):
+        if not 0 <= self.error_rate_threshold <= 1:
             raise ValueError("error_rate_threshold must be between 0 and 1")
         if self.service_down_threshold <= 0:
             raise ValueError("service_down_threshold must be positive")

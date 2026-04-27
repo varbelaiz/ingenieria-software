@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -22,6 +23,7 @@ from app.alerts import (
     MockNotifier,
     SlackNotifier,
 )
+from app.alerts.notifiers import Notifier
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -41,6 +43,7 @@ def _create_alert_scheduler() -> AlertScheduler:
 
     # Use Slack notifier if webhook URL is provided, otherwise use mock
     webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+    notifier: Notifier
     if webhook_url and webhook_url.strip():
         notifier = SlackNotifier(webhook_url=webhook_url)
         logger.info("Alerts configured to send to Slack")
@@ -70,14 +73,15 @@ async def _run_alert_scheduler(interval_seconds: int = 30) -> None:
     Args:
         interval_seconds: How often to check alerts (default 30 seconds)
     """
-    logger.info(f"Alert scheduler started (check interval: {interval_seconds}s)")
+    logger.info("Alert scheduler started (check interval: %s s)", interval_seconds)
+    assert alert_scheduler is not None
 
     try:
         while True:
             try:
                 await alert_scheduler.check_alerts(metrics_adapter)
-            except Exception as e:
-                logger.error(f"Error during alert check: {e}", exc_info=True)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.error("Error during alert check: %s", e, exc_info=True)
 
             await asyncio.sleep(interval_seconds)
     except asyncio.CancelledError:
@@ -86,13 +90,13 @@ async def _run_alert_scheduler(interval_seconds: int = 30) -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """
     FastAPI lifespan context manager for startup and shutdown events.
 
     Initializes alert scheduler on startup and cancels on shutdown.
     """
-    global alert_scheduler, scheduler_task
+    global alert_scheduler, scheduler_task  # pylint: disable=global-statement
 
     # Startup
     if os.getenv("ALERT_ENABLED", "true").lower() == "true":
@@ -101,8 +105,8 @@ async def lifespan(app: FastAPI):
             interval = int(os.getenv("ALERT_CHECK_INTERVAL_SECONDS", "30"))
             scheduler_task = asyncio.create_task(_run_alert_scheduler(interval))
             logger.info("Alert system initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize alert system: {e}", exc_info=True)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error("Failed to initialize alert system: %s", e, exc_info=True)
     else:
         logger.info("Alert system disabled")
 

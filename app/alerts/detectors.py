@@ -2,7 +2,13 @@
 
 from abc import ABC, abstractmethod
 from typing import Optional
-from app.alerts.models import AlertEvent, AlertType, AlertSeverity, AlertStatus, AlertConfig
+from app.alerts.models import (
+    AlertEvent,
+    AlertType,
+    AlertSeverity,
+    AlertStatus,
+    AlertConfig,
+)
 
 
 class MetricsProvider:
@@ -35,7 +41,6 @@ class AlertDetector(ABC):
         Returns:
             AlertEvent if condition is met, None otherwise
         """
-        pass
 
 
 class LatencyDetector(AlertDetector):
@@ -63,7 +68,10 @@ class LatencyDetector(AlertDetector):
         return AlertEvent(
             alert_type=AlertType.LATENCY,
             severity=AlertSeverity.HIGH,
-            message=f"API latency exceeded {self.config.latency_threshold}s: {avg_latency:.2f}s",
+            message=(
+                f"API latency exceeded {self.config.latency_threshold}s:"
+                f" {avg_latency:.2f}s"
+            ),
             status=AlertStatus.ACTIVE,
             context={
                 "current_latency": avg_latency,
@@ -97,7 +105,10 @@ class ErrorRateDetector(AlertDetector):
         return AlertEvent(
             alert_type=AlertType.ERROR_RATE,
             severity=AlertSeverity.MEDIUM,
-            message=f"Error rate exceeded {self.config.error_rate_threshold * 100:.1f}%: {error_rate * 100:.2f}%",
+            message=(
+                f"Error rate exceeded {self.config.error_rate_threshold * 100:.1f}%:"
+                f" {error_rate * 100:.2f}%"
+            ),
             status=AlertStatus.ACTIVE,
             context={
                 "current_error_rate": error_rate,
@@ -133,7 +144,10 @@ class ServiceDownDetector(AlertDetector):
         return AlertEvent(
             alert_type=AlertType.SERVICE_DOWN,
             severity=AlertSeverity.CRITICAL,
-            message=f"Service appears to be down: no requests in last {self.config.service_down_threshold}s",
+            message=(
+                f"Service appears to be down: no requests in last"
+                f" {self.config.service_down_threshold}s"
+            ),
             status=AlertStatus.ACTIVE,
             context={
                 "downtime_threshold_seconds": self.config.service_down_threshold,

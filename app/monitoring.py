@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import sys
 import threading
 from collections import defaultdict
@@ -13,11 +14,13 @@ from typing import Iterable, NamedTuple
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 
+from app.alerts.detectors import MetricsProvider
+
 # Import resource module only on UNIX-like systems (not available on Windows)
 if sys.platform != "win32":
     import resource
 else:
-    resource = None  # type: ignore
+    resource = None  # type: ignore  # pylint: disable=invalid-name
 
 
 class ResourceUsage(NamedTuple):
@@ -26,6 +29,7 @@ class ResourceUsage(NamedTuple):
     ru_maxrss: int
     ru_utime: float
     ru_stime: float
+
 
 REQUEST_DURATION_BUCKETS = (
     0.005,
@@ -243,7 +247,7 @@ def _resident_memory_bytes(ru_maxrss: int) -> int:
         return 0
     # On macOS, ru_maxrss is already in bytes
     # On Linux, ru_maxrss is in kilobytes
-    if os.name == "posix" and os.uname().sysname == "Darwin":
+    if os.name == "posix" and platform.system() == "Darwin":
         return ru_maxrss
     return ru_maxrss * 1024
 
@@ -257,7 +261,7 @@ def metrics() -> PlainTextResponse:
     )
 
 
-class PrometheusMetricsAdapter:
+class PrometheusMetricsAdapter(MetricsProvider):
     """Adapter to expose Prometheus metrics as MetricsProvider for alerts."""
 
     def get_average_latency(self) -> float | None:
@@ -292,7 +296,9 @@ class PrometheusMetricsAdapter:
 
             return total_errors / total_requests
 
-    def get_request_count_last_seconds(self, seconds: int = 30) -> int:
+    def get_request_count_last_seconds(  # pylint: disable=unused-argument
+        self, seconds: int = 30
+    ) -> int:
         """
         Get number of requests in the last N seconds.
 

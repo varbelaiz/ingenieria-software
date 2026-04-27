@@ -1,7 +1,7 @@
 """Alert notifiers for sending alerts to various channels."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
+
 import httpx
 from app.alerts.models import AlertEvent
 
@@ -20,7 +20,6 @@ class Notifier(ABC):
         Returns:
             True if sent successfully, False otherwise
         """
-        pass
 
 
 class MockNotifier(Notifier):
@@ -80,7 +79,7 @@ class SlackNotifier(Notifier):
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(self.webhook_url, json=payload)
                 return response.status_code == 200
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             return False
 
     @staticmethod
@@ -116,7 +115,10 @@ class SlackNotifier(Notifier):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Status:* {alert.status.value}\n*Message:* {alert.message}",
+                    "text": (
+                        f"*Status:* {alert.status.value}\n"
+                        f"*Message:* {alert.message}"
+                    ),
                 },
             },
         ]
