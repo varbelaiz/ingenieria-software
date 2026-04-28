@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      API_KEY: ${API_KEY:-api_key}
+    ports:
+      - "8000:8000"
+
+  prometheus:
+    build:
+      context: ./prometheus
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "9090:9090"
+
+  grafana:
+    build:
+      context: ./grafana
+      dockerfile: Dockerfile
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GF_SECURITY_ADMIN_USER:?missing GF_SECURITY_ADMIN_USER}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GF_SECURITY_ADMIN_PASSWORD:?missing GF_SECURITY_ADMIN_PASSWORD}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/fase1/fase1-technical-monitoring.json
+    ports:
+      - "3000:3000"

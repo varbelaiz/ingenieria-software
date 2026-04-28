@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Git Flow — Forecasting API</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #ffffff;
+      color: #24292f;
+      padding: 32px 24px 48px;
+      min-height: 100vh;
+    }
+    h1 { font-size: 18px; font-weight: 600; color: #24292f; margin-bottom: 4px; }
+    .subtitle { color: #57606a; font-size: 13px; margin-bottom: 22px; }
+    .legend {
+      display: flex; gap: 22px; flex-wrap: wrap;
+      margin-bottom: 24px; font-size: 12px; color: #8b949e;
+      align-items: center;
+    }
+    .legend-item { display: flex; align-items: center; gap: 7px; }
+    .legend-line { width: 26px; height: 3px; border-radius: 2px; }
+    .legend-line.dashed {
+      height: 2px;
+      background: repeating-linear-gradient(
+        90deg, #57606a 0, #57606a 5px, transparent 5px, transparent 9px
+      );
+    }
+    #scroll { overflow-x: auto; padding-bottom: 8px; cursor: default; }
+    svg { display: block; }
+    .tip {
+      position: fixed;
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s;
+      z-index: 100;
+      max-width: 280px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    }
+    .tip-pr   { font-weight: 700; color: #0969da; font-family: monospace; }
+    .tip-name { color: #24292f; margin-top: 1px; }
+    .tip-meta { color: #57606a; margin-top: 3px; font-size: 11px; }
+    .tip-stack{ color: #bc4c00; font-size: 11px; margin-top: 2px; }
+    .tip-open { color: #57606a; font-size: 11px; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+  <h1>Historial de Branches y Pull Requests</h1>
+  <p class="subtitle">Gitflow real del repositorio — Forecasting API · Stacked branches en la fase inicial</p>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-line" style="background:#3fb950"></div><span>main</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:#f97316"></div><span>develop</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:#58a6ff"></div><span>feature/*</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:#f85149"></div><span>fix/*</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:#d2a8ff"></div><span>revert/*</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line dashed"></div><span>Abierto (sin merge)</span>
+    </div>
+  </div>
+
+  <div id="scroll">
+    <svg id="g"></svg>
+  </div>
+  <div class="tip" id="tip"></div>
+
+<script>
+// ─── Layout constants ─────────────────────────────────────────────────────────
+const COL  = 86;   // px per column
+const X0   = 118;  // left origin x
+
+// Vertical lane y-positions
+const Y = {
+  main:    64,
+  fix_ci:  113,   // shared lane between main and develop (CI fix + release)
+  develop: 158,
+  f1:      225,   // project-setup
+  f2:      281,   // initial-api   (stacked on f1)
+  f3:      333,   // dashboard     (stacked on f2)
+  f4:      380,   // monitoring-healthz  (stacked on f3)
+  f5:      420,   // stress-testing      (stacked on f4)
+  f5b:     460,   // cd-pipeline         (from f3, parallel)
+};
+
+const TOTAL_COLS = 19;
+const SVG_W = X0 + TOTAL_COLS * COL + 55;
+const SVG_H = 508;
+
+// Colors
+const C = {
+  main:    '#1a7f37',
+  develop: '#bc4c00',
+  feature: '#0969da',
+  fix:     '#cf222e',
+  revert:  '#8250df',
+  open:    '#57606a',
+  bg:      '#ffffff',
+  surface: '#f6f8fa',
+  border:  '#d0d7de',
+  muted:   '#57606a',
+};
+
+function branchColor(type, open) {
+  if (open) return C.open;
+  return { feature: C.feature, fix: C.fix, revert: C.revert, release: C.main }[type] ?? C.feature;
+}
+
+// ─── PR data ─────────────────────────────────────────────────────────────────
+// fromLane / fromCol : where the branch-off dot sits
+// toLane   / toCol   : where the merge node sits
+// bodyLane           : which y lane the horizontal body runs at
+
+const PRS = [
+  // ── Phase 1: Stacked branches (Apr 22 initial batch) ─────────────────────
+  {
+    pr: 5, short: 'CI pipeline', type: 'fix', open: false,
+    branch: 'fix/ci-lint', date: '30 Mar',
+    title: 'Create CI pipeline',
+    stackedOn: null,
+    fromLane: 'main',    fromCol: 1.9,
+    toLane:   'main',    toCol:   3.3,
+    bodyLane: 'fix_ci',
+  },
+  {
+    pr: 1, short: 'Project setup', type: 'feature', open: false,
+    branch: 'feature/project-setup', date: '22 Abr',
+    title: 'Feature/project setup',
+    stackedOn: 'develop',
+    fromLane: 'develop', fromCol: 0.7,
+    toLane:   'develop', toCol:   4.1,
+    bodyLane: 'f1',
+  },
+  {
+    pr: 2, short: 'Initial API', type: 'feature', open: false,
+    branch: 'feature/initial-api', date: '22 Abr',
+    title: 'Feature/initial API',
+    stackedOn: 'feature/project-setup',
+    fromLane: 'f1',      fromCol: 1.1,   // ← branches from project-setup lane
+    toLane:   'develop', toCol:   4.6,
+    bodyLane: 'f2',
+  },
+  {
+    pr: 3, short: 'Dashboard V1', type: 'feature', open: false,
+    branch: 'feature/dashboard', date: '22 Abr',
+    title: 'Dashboard V1',
+    stackedOn: 'feature/initial-api',
+    fromLane: 'f2',      fromCol: 1.5,   // ← branches from initial-api lane
+    toLane:   'develop', toCol:   5.1,
+    bodyLane: 'f3',
+  },
+  {
+    pr: 6, short: 'Monitoring', type: 'feature', open: false,
+    branch: 'feature/monitoring-healthz', date: '22 Abr',
+    title: 'Monitoring + healthz endpoint',
+    stackedOn: 'feature/dashboard',
+    fromLane: 'f3',      fromCol: 2.0,   // ← from dashboard
+    toLane:   'develop', toCol:   5.6,
+    bodyLane: 'f4',
+  },
+  {
+    pr: 7, short: 'Load testing', type: 'feature', open: false,
+    branch: 'feature/stress-testing', date: '22 Abr',
+    title: 'Stress testing con Locust',
+    stackedOn: 'feature/monitoring-healthz',
+    fromLane: 'f4',      fromCol: 2.4,   // ← from monitoring lane
+    toLane:   'develop', toCol:   6.1,
+    bodyLane: 'f5',
+  },
+  {
+    pr: 8, short: 'CD Pipeline', type: 'feature', open: false,
+    branch: 'feature/cd-pipeline', date: '22 Abr',
+    title: 'CD pipeline — Terraform workspace-aware',
+    stackedOn: 'feature/dashboard',
+    fromLane: 'f3',      fromCol: 2.8,   // ← also from dashboard (parallel to monitoring)
+    toLane:   'develop', toCol:   6.6,
+    bodyLane: 'f5b',
+  },
+
+  // ── Phase 2: Individual branches from develop ─────────────────────────────
+  {
+    pr: 9, short: 'Grafana secure', type: 'feature', open: false,
+    branch: 'feature/dashboard', date: '24 Abr',
+    title: 'Grafana: credenciales admin seguras',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 7.9,
+    toLane:   'develop', toCol:   8.7,
+    bodyLane: 'f1',
+  },
+  {
+    pr: 10, short: 'Docs', type: 'feature', open: false,
+    branch: 'feature/docs', date: '24 Abr',
+    title: 'Módulo centralizado de documentación',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 8.9,
+    toLane:   'develop', toCol:   9.7,
+    bodyLane: 'f2',
+  },
+  {
+    pr: 11, short: 'Dashboard v2', type: 'feature', open: false,
+    branch: 'feature/dashboard', date: '24 Abr',
+    title: 'Dashboard improvements',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 9.9,
+    toLane:   'develop', toCol:   10.7,
+    bodyLane: 'f1',
+  },
+  {
+    pr: 12, short: 'Revert dash', type: 'revert', open: false,
+    branch: 'revert-11-feature/dashboard', date: '24 Abr',
+    title: 'Revert "Feature/dashboard"',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 10.9,
+    toLane:   'develop', toCol:   11.7,
+    bodyLane: 'f2',
+  },
+  {
+    pr: 13, short: 'Trivy CI', type: 'feature', open: false,
+    branch: 'feature/add-trivy', date: '25 Abr',
+    title: 'Trivy Docker vulnerability scanning en CI',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 11.9,
+    toLane:   'develop', toCol:   12.7,
+    bodyLane: 'f1',
+  },
+  {
+    pr: '15–17', short: 'Dashboard fixes', type: 'feature', open: false,
+    branch: 'feature/dashboard', date: '26 Abr',
+    title: 'Dashboard fixes — 3 iteraciones',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 12.9,
+    toLane:   'develop', toCol:   13.7,
+    bodyLane: 'f1',
+  },
+
+  // ── Phase 3: Open branches (no merge yet) ────────────────────────────────
+  {
+    pr: 21, short: 'ADRs + diagrams', type: 'feature', open: false,
+    branch: 'docs/ADRs', date: '28 Abr',
+    title: 'Documentación: ADRs + diagramas (git-flow, AWS infra)',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 14.4,
+    toLane:   'develop', toCol:   15.7,
+    bodyLane: 'f3',
+  },
+  {
+    pr: null, short: 'Alerting', type: 'feature', open: true,
+    branch: 'feature/alerts', date: 'Abierto',
+    title: 'Sistema de alertas (en desarrollo)',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 15.0,
+    toLane:   'develop', toCol:   16.2,
+    bodyLane: 'f2',
+  },
+
+  // ── Phase 4: Release a prod (develop → main) ─────────────────────────────
+  {
+    pr: null, short: 'Release', type: 'release', open: false,
+    branch: 'develop → main', date: 'Release',
+    title: 'Release a prod: merge develop → main',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 16.8,
+    toLane:   'main',    toCol:   17.8,
+    bodyLane: 'fix_ci',
+  },
+];
+
+// ─── SVG helpers ─────────────────────────────────────────────────────────────
+const NS  = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('g');
+svg.setAttribute('width',   SVG_W);
+svg.setAttribute('height',  SVG_H);
+svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+
+function mk(tag, attrs, parent = svg) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  parent.appendChild(e);
+  return e;
+}
+function tx(str, x, y, attrs, parent = svg) {
+  const e = mk('text', { x, y, ...attrs }, parent);
+  e.textContent = str;
+  return e;
+}
+function colX(col) { return X0 + col * COL; }
+
+// Arc path:
+//   (bx, by) = branch-off point
+//   (mx, my) = merge-in point
+//   bodyY    = horizontal body y
+//   open     = if true, don't draw the merge-back segment
+function arcPath(bx, by, mx, my, bodyY, open) {
+  const r = 16;
+  const branch = `M ${bx} ${by} Q ${bx} ${bodyY} ${bx + r} ${bodyY}`;
+  const body   = `L ${mx - r} ${bodyY}`;
+  const merge  = `Q ${mx} ${bodyY} ${mx} ${my}`;
+  if (open) return `${branch} ${body}`;
+  return `${branch} ${body} ${merge}`;
+}
+
+// ─── Draw background ─────────────────────────────────────────────────────────
+mk('rect', { x: 0, y: 0, width: SVG_W, height: SVG_H, fill: C.bg });
+
+// Phase bands
+const phases = [
+  { s: 0,    e: 7.2,  title: 'Fase inicial — Stacked branches', sub: '22 Abr' },
+  { s: 14.3, e: 16.5, title: 'En desarrollo',                    sub: '' },
+  { s: 16.5, e: 18.5, title: 'Deploy a prod',                    sub: 'Release' },
+];
+for (const ph of phases) {
+  const px = colX(ph.s), pw = colX(ph.e) - colX(ph.s);
+  mk('rect', { x: px, y: 30, width: pw, height: SVG_H - 38, rx: 6,
+               fill: C.surface, opacity: '.5' });
+  tx(ph.title, px + pw / 2, 45, {
+    'text-anchor': 'middle', fill: C.muted,
+    'font-size': '10', 'font-weight': '600', 'font-family': 'inherit',
+  });
+  tx(ph.sub, px + pw / 2, 57, {
+    'text-anchor': 'middle', fill: C.border,
+    'font-size': '9', 'font-family': 'inherit',
+  });
+}
+
+// Branch name labels (left margin)
+const branchLabels = [
+  { label: 'main',          y: Y.main,    color: C.main },
+  { label: 'develop',       y: Y.develop, color: C.develop },
+  { label: 'project-setup', y: Y.f1,      color: C.feature },
+  { label: 'initial-api',   y: Y.f2,      color: C.feature },
+  { label: 'dashboard',     y: Y.f3,      color: C.feature },
+  { label: 'monitoring',    y: Y.f4,      color: C.feature },
+  { label: 'stress-test',   y: Y.f5,      color: C.feature },
+  { label: 'cd-pipeline',   y: Y.f5b,     color: C.feature },
+];
+for (const b of branchLabels) {
+  tx(b.label, X0 - 12, b.y + 4, {
+    'text-anchor': 'end', fill: b.color,
+    'font-size': '10', 'font-weight': '600', 'font-family': 'monospace',
+  });
+}
+
+// Continuous main + develop lines
+const lineEnd = colX(TOTAL_COLS);
+mk('line', { x1: X0 - 12, y1: Y.main,    x2: lineEnd, y2: Y.main,
+             stroke: C.main,    'stroke-width': '2.5' });
+mk('line', { x1: X0 - 12, y1: Y.develop, x2: lineEnd, y2: Y.develop,
+             stroke: C.develop, 'stroke-width': '2.5' });
+
+// Dashed guide lines for feature lanes
+for (const ly of [Y.f1, Y.f2, Y.f3, Y.f4, Y.f5, Y.f5b, Y.fix_ci]) {
+  mk('line', { x1: X0 - 12, y1: ly, x2: lineEnd, y2: ly,
+               stroke: C.border, 'stroke-width': '1', 'stroke-dasharray': '3 5' });
+}
+
+// ─── Stacking arrows: show the cascade of nested branches ────────────────────
+// Small annotation on the left for Phase 1 to explain stacking
+const stackArrowX = colX(0.4);
+const stackItems = [
+  { fromY: Y.develop, toY: Y.f1  },
+  { fromY: Y.f1,      toY: Y.f2  },
+  { fromY: Y.f2,      toY: Y.f3  },
+  { fromY: Y.f3,      toY: Y.f4  },
+  { fromY: Y.f4,      toY: Y.f5  },
+  { fromY: Y.f3,      toY: Y.f5b },
+];
+for (const s of stackItems) {
+  mk('line', {
+    x1: stackArrowX, y1: s.fromY,
+    x2: stackArrowX, y2: s.toY - 6,
+    stroke: '#d0d7de', 'stroke-width': '1.2', 'stroke-dasharray': '2 3',
+  });
+  // Arrowhead
+  mk('polygon', {
+    points: `${stackArrowX},${s.toY} ${stackArrowX - 4},${s.toY - 7} ${stackArrowX + 4},${s.toY - 7}`,
+    fill: '#d0d7de',
+  });
+}
+
+// ─── Sync arrows: main → feature branch (merge main into stacked branch) ────
+// These represent the "Merge branch 'main' into feature/X" commits that
+// propagated the CI fix from main down into the in-progress feature branches.
+const syncs = [
+  // main → feature (propagaron ci.yml del PR #5)
+  {
+    col: 3.7,
+    fromLane: 'main', toLane: 'f2',
+    color: C.main,
+    label: 'sync CI',
+    title: "Merge branch 'main' into feature/initial-api — propagó ci.yml",
+  },
+  {
+    col: 4.05,
+    fromLane: 'main', toLane: 'f3',
+    color: C.main,
+    label: 'sync CI',
+    title: "Merge branch 'main' into feature/dashboard — propagó ci.yml",
+  },
+  // develop → feature/dashboard (antes de PR #15, para estar al día)
+  {
+    col: 13.2,
+    fromLane: 'develop', toLane: 'f1',
+    color: C.develop,
+    label: 'sync',
+    title: "Merge branch 'develop' into feature/dashboard — antes de PR #15",
+  },
+  // develop → feature/alerts (27 Abr, branch abierto se sincronizó con develop)
+  {
+    col: 15.4,
+    fromLane: 'develop', toLane: 'f2',
+    color: C.develop,
+    label: 'sync',
+    title: "Merge branch 'develop' into feature/alerts — branch abierto al día con develop",
+  },
+];
+
+for (const s of syncs) {
+  const sx  = colX(s.col);
+  const sy1 = Y[s.fromLane];
+  const sy2 = Y[s.toLane];
+  const g   = mk('g', { style: 'cursor:pointer' });
+
+  // Dashed vertical line
+  mk('line', {
+    x1: sx, y1: sy1 + 5,
+    x2: sx, y2: sy2 - 8,
+    stroke: C.main, 'stroke-width': '1.5',
+    'stroke-dasharray': '4 3', opacity: '0.7',
+  }, g);
+
+  // Arrowhead pointing down into the feature lane
+  mk('polygon', {
+    points: `${sx},${sy2} ${sx - 5},${sy2 - 9} ${sx + 5},${sy2 - 9}`,
+    fill: C.main, opacity: '0.7',
+  }, g);
+
+  // Dot on main line
+  mk('circle', { cx: sx, cy: sy1, r: '4',
+                 fill: C.bg, stroke: C.main, 'stroke-width': '2', opacity: '0.8' }, g);
+
+  // Label
+  tx(s.label, sx + 5, (sy1 + sy2) / 2 + 4, {
+    fill: C.main, 'font-size': '8', 'font-family': 'inherit', opacity: '0.8',
+  }, g);
+
+  // Tooltip
+  g.addEventListener('mouseenter', e => {
+    tip.innerHTML = `
+      <div class="tip-pr" style="color:${C.main}">Sync desde main</div>
+      <div class="tip-name">${s.title}</div>
+      <div class="tip-meta">Propagó ci.yml (PR #5) al feature branch</div>
+    `;
+    tip.style.opacity = '1';
+    moveTip(e);
+  });
+  g.addEventListener('mousemove',  moveTip);
+  g.addEventListener('mouseleave', hideTip);
+}
+
+// ─── Tooltip ─────────────────────────────────────────────────────────────────
+const tip = document.getElementById('tip');
+function showTip(pr, e) {
+  const prStr = pr.pr != null ? `PR #${pr.pr}` : 'Sin PR';
+  const stackStr = pr.stackedOn
+    ? `<div class="tip-stack">📚 Stacked on: ${pr.stackedOn}</div>`
+    : '';
+  const openStr  = pr.open
+    ? `<div class="tip-open">⏳ Sin merge — en desarrollo</div>`
+    : '';
+  tip.innerHTML = `
+    <div class="tip-pr">${prStr} — ${pr.branch}</div>
+    <div class="tip-name">${pr.title}</div>
+    <div class="tip-meta">${pr.date}</div>
+    ${stackStr}${openStr}
+  `;
+  tip.style.opacity = '1';
+  moveTip(e);
+}
+function hideTip()  { tip.style.opacity = '0'; }
+function moveTip(e) {
+  const tx2 = e.clientX + 18, ty2 = e.clientY - 48;
+  tip.style.left = `${Math.min(tx2, window.innerWidth - 300)}px`;
+  tip.style.top  = `${Math.max(ty2, 8)}px`;
+}
+
+// ─── Render each PR ───────────────────────────────────────────────────────────
+for (const pr of PRS) {
+  const bx    = colX(pr.fromCol);
+  const by    = Y[pr.fromLane];
+  const mx    = colX(pr.toCol);
+  const my    = Y[pr.toLane];
+  const bodyY = Y[pr.bodyLane];
+  const col   = branchColor(pr.type, pr.open);
+
+  const g = mk('g', { style: 'cursor:pointer' });
+
+  // Arc
+  mk('path', {
+    d: arcPath(bx, by, mx, my, bodyY, pr.open),
+    fill: 'none', stroke: col, 'stroke-width': '2',
+    'stroke-dasharray': pr.open ? '5 4' : 'none',
+    opacity: pr.open ? '0.5' : '0.9',
+  }, g);
+
+  // Branch-off dot (open circle on the source lane)
+  mk('circle', { cx: bx, cy: by, r: '4',
+                 fill: C.bg, stroke: col, 'stroke-width': '2' }, g);
+
+  if (!pr.open) {
+    // Merge node (filled circle on target lane)
+    mk('circle', { cx: mx, cy: my, r: '6.5',
+                   fill: col, stroke: C.bg, 'stroke-width': '2.5' }, g);
+  } else {
+    // Arrow tip for open branch
+    mk('polygon', {
+      points: `${mx},${bodyY} ${mx - 6},${bodyY - 5} ${mx - 6},${bodyY + 5}`,
+      fill: col, opacity: '0.5',
+    }, g);
+  }
+
+  // Labels: PR number + short name, at the arc midpoint
+  const lx = (bx + mx) / 2;
+  tx(pr.pr != null ? `#${pr.pr}` : '···', lx, bodyY - 7, {
+    'text-anchor': 'middle', fill: col,
+    'font-size': '9', 'font-weight': '700', 'font-family': 'monospace',
+  }, g);
+  tx(pr.short, lx, bodyY + 8, {
+    'text-anchor': 'middle', fill: C.muted,
+    'font-size': '9', 'font-family': 'inherit',
+  }, g);
+
+  // Tooltip
+  g.addEventListener('mouseenter', e => showTip(pr, e));
+  g.addEventListener('mousemove',  moveTip);
+  g.addEventListener('mouseleave', hideTip);
+}
+
+// ─── Start nodes on main and develop ─────────────────────────────────────────
+for (const [ly, lc] of [[Y.main, C.main], [Y.develop, C.develop]]) {
+  mk('circle', { cx: X0 - 12, cy: ly, r: '5',
+                 fill: lc, stroke: C.bg, 'stroke-width': '2' });
+}
+
+</script>
+</body>
+</html>
