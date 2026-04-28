@@ -91,7 +91,7 @@ const X0   = 118;  // left origin x
 // Vertical lane y-positions
 const Y = {
   main:    64,
-  fix_ci:  113,   // fix/ci-lint arc sits here (between main and develop)
+  fix_ci:  113,   // shared lane between main and develop (CI fix + release)
   develop: 158,
   f1:      225,   // project-setup
   f2:      281,   // initial-api   (stacked on f1)
@@ -101,7 +101,7 @@ const Y = {
   f5b:     460,   // cd-pipeline         (from f3, parallel)
 };
 
-const TOTAL_COLS = 17;
+const TOTAL_COLS = 19;
 const SVG_W = X0 + TOTAL_COLS * COL + 55;
 const SVG_H = 508;
 
@@ -121,7 +121,7 @@ const C = {
 
 function branchColor(type, open) {
   if (open) return C.open;
-  return { feature: C.feature, fix: C.fix, revert: C.revert }[type] ?? C.feature;
+  return { feature: C.feature, fix: C.fix, revert: C.revert, release: C.main }[type] ?? C.feature;
 }
 
 // ─── PR data ─────────────────────────────────────────────────────────────────
@@ -253,6 +253,15 @@ const PRS = [
 
   // ── Phase 3: Open branches (no merge yet) ────────────────────────────────
   {
+    pr: 21, short: 'ADRs + diagrams', type: 'feature', open: true,
+    branch: 'docs/ADRs', date: 'Abierto',
+    title: 'Documentación: ADRs + diagramas (git-flow, AWS infra)',
+    stackedOn: null,
+    fromLane: 'develop', fromCol: 14.4,
+    toLane:   'develop', toCol:   15.7,
+    bodyLane: 'f3',
+  },
+  {
     pr: null, short: 'Alerting', type: 'feature', open: true,
     branch: 'feature/alerts', date: 'Abierto',
     title: 'Sistema de alertas (en desarrollo)',
@@ -261,14 +270,16 @@ const PRS = [
     toLane:   'develop', toCol:   16.2,
     bodyLane: 'f2',
   },
+
+  // ── Phase 4: Release a prod (develop → main) ─────────────────────────────
   {
-    pr: null, short: 'Fix wells', type: 'fix', open: true,
-    branch: 'fix/response-get-apiv1wells', date: 'Abierto',
-    title: 'Fix /wells endpoint (en desarrollo)',
+    pr: null, short: 'Release', type: 'release', open: false,
+    branch: 'develop → main', date: 'Release',
+    title: 'Release a prod: merge develop → main',
     stackedOn: null,
-    fromLane: 'develop', fromCol: 15.3,
-    toLane:   'develop', toCol:   16.5,
-    bodyLane: 'f3',
+    fromLane: 'develop', fromCol: 16.8,
+    toLane:   'main',    toCol:   17.8,
+    bodyLane: 'fix_ci',
   },
 ];
 
@@ -312,8 +323,8 @@ mk('rect', { x: 0, y: 0, width: SVG_W, height: SVG_H, fill: C.bg });
 // Phase bands
 const phases = [
   { s: 0,    e: 7.2,  title: 'Fase inicial — Stacked branches', sub: '22 Abr' },
-  { s: 7.2,  e: 14.3, title: 'Iteración individual',             sub: '24–26 Abr' },
-  { s: 14.3, e: 16.8, title: 'En desarrollo',                    sub: 'Hoy' },
+  { s: 14.3, e: 16.5, title: 'En desarrollo',                    sub: '' },
+  { s: 16.5, e: 18.5, title: 'Deploy a prod',                    sub: 'Release' },
 ];
 for (const ph of phases) {
   const px = colX(ph.s), pw = colX(ph.e) - colX(ph.s);
@@ -548,15 +559,6 @@ for (const [ly, lc] of [[Y.main, C.main], [Y.develop, C.develop]]) {
                  fill: lc, stroke: C.bg, 'stroke-width': '2' });
 }
 
-// ─── "Hoy" marker ─────────────────────────────────────────────────────────────
-const hoyX = colX(14.8);
-mk('line', { x1: hoyX, y1: 60, x2: hoyX, y2: SVG_H - 10,
-             stroke: '#f0883e', 'stroke-width': '1.5',
-             'stroke-dasharray': '3 4', opacity: '0.5' });
-tx('Hoy', hoyX, 56, {
-  'text-anchor': 'middle', fill: '#f0883e',
-  'font-size': '10', 'font-weight': '600', 'font-family': 'inherit',
-});
 </script>
 </body>
 </html>
