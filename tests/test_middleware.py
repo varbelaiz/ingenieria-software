@@ -36,9 +36,9 @@ def test_healthz_is_exposed_without_api_key() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_healthz_is_hidden_from_openapi_schema() -> None:
-    """It should keep the technical health check out of the public schema."""
+def test_healthz_is_in_openapi_schema() -> None:
+    """Health check endpoint should be visible in the public schema."""
     response = client.get("/openapi.json")
 
     assert response.status_code == 200
-    assert "/healthz" not in response.json()["paths"]
+    assert "/healthz" in response.json()["paths"]
