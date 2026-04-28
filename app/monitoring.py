@@ -57,7 +57,7 @@ _REQUEST_DURATION_BUCKET_COUNTS: dict[MetricLabels, list[float]] = defaultdict(
 _LOCK = threading.Lock()
 _PROCESS_START_TIME_SECONDS = time()
 
-router = APIRouter(include_in_schema=False)
+router = APIRouter(tags=["monitoring"])
 
 
 def start_timer() -> float:
