@@ -26,6 +26,7 @@ app.include_router(monitoring_router)
 
 
 def custom_openapi() -> dict:
+    """Return OpenAPI schema extended with X-API-Key security scheme."""
     if app.openapi_schema:
         return app.openapi_schema
     schema = get_openapi(
