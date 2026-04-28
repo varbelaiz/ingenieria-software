@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWS Infrastructure — Forecasting API</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fff;
+      color: #24292f;
+      padding: 32px 24px 48px;
+    }
+    h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #57606a; margin-bottom: 24px; }
+    #scroll { overflow-x: auto; }
+    svg { display: block; }
+    .tip {
+      position: fixed;
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s;
+      z-index: 100;
+      max-width: 280px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.1);
+    }
+    .tip-title { font-weight: 700; color: #24292f; }
+    .tip-body  { color: #57606a; margin-top: 2px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <h1>Infraestructura AWS — Forecasting API</h1>
+  <p class="subtitle">Región us-east-2 &nbsp;·&nbsp; Terraform workspaces: <strong>staging</strong> (develop) &amp; <strong>prod</strong> (main)</p>
+  <div id="scroll"><svg id="g" width="960" height="682" viewBox="0 0 960 682"></svg></div>
+  <div class="tip" id="tip"></div>
+
+<script>
+'use strict';
+const NS  = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('g');
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function el(tag, attrs = {}, parent = svg) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  parent.appendChild(e);
+  return e;
+}
+function rect(x, y, w, h, a = {}, p = svg) {
+  return el('rect', { x, y, width: w, height: h, ...a }, p);
+}
+function text(s, x, y, a = {}, p = svg) {
+  const e = el('text', { x, y, ...a }, p);
+  e.textContent = s;
+  return e;
+}
+function line(x1, y1, x2, y2, a = {}, p = svg) {
+  return el('line', { x1, y1, x2, y2, ...a }, p);
+}
+function path(d, a = {}, p = svg) {
+  return el('path', { d, fill: 'none', ...a }, p);
+}
+function group(a = {}, p = svg) { return el('g', a, p); }
+
+// Tooltip
+const tip = document.getElementById('tip');
+function tip_on(node, title, body) {
+  node.addEventListener('mouseenter', e => {
+    tip.innerHTML = `<div class="tip-title">${title}</div><div class="tip-body">${body}</div>`;
+    tip.style.opacity = 1;
+    tip_move(e);
+  });
+  node.addEventListener('mousemove', tip_move);
+  node.addEventListener('mouseleave', () => tip.style.opacity = 0);
+  function tip_move(e) {
+    tip.style.left = Math.min(e.clientX + 16, window.innerWidth - 296) + 'px';
+    tip.style.top  = Math.max(e.clientY - 50, 8) + 'px';
+  }
+}
+
+// Labeled boundary box (dashed or solid border)
+function boundary(x, y, w, h, { label, color, fill = '#fff', dashed = false, headerColor } = {}) {
+  const g = group();
+  rect(x, y, w, h, {
+    rx: 8, fill,
+    stroke: color, 'stroke-width': 1.5,
+    'stroke-dasharray': dashed ? '6 3' : 'none',
+  }, g);
+  if (headerColor) {
+    rect(x, y, w, 26, { rx: 8, fill: headerColor }, g);
+    rect(x, y + 18, w, 8, { fill: headerColor }, g);
+    text(label, x + w / 2, y + 17, {
+      'text-anchor': 'middle', fill: '#fff',
+      'font-size': 11, 'font-weight': 700,
+    }, g);
+  } else {
+    text(label, x + 10, y + 16, {
+      fill: color, 'font-size': 10, 'font-weight': 700,
+    }, g);
+  }
+  return g;
+}
+
+// Small service / support card
+function card(x, y, w, h, title, sub, { stroke = '#d0d7de', fill = '#f6f8fa', tc = '#24292f' } = {}) {
+  const g = group();
+  rect(x, y, w, h, { rx: 6, fill, stroke, 'stroke-width': 1.5 }, g);
+  text(title, x + w / 2, y + (sub ? h / 2 - 2 : h / 2 + 4), {
+    'text-anchor': 'middle', fill: tc, 'font-size': 11, 'font-weight': 700,
+  }, g);
+  if (sub) text(sub, x + w / 2, y + h / 2 + 12, {
+    'text-anchor': 'middle', fill: '#57606a', 'font-size': 9,
+  }, g);
+  return g;
+}
+
+// Arrow markers
+const defs = el('defs');
+function marker(id, color) {
+  const m = el('marker', { id, markerWidth: 9, markerHeight: 6, refX: 8, refY: 3, orient: 'auto' }, defs);
+  el('polygon', { points: '0 0, 9 3, 0 6', fill: color }, m);
+}
+marker('m-gray',   '#57606a');
+marker('m-blue',   '#0969da');
+marker('m-pink',   '#c7366a');
+marker('m-red',    '#cf222e');
+marker('m-orange', '#bc4c00');
+
+function arrow(x1, y1, x2, y2, via, { color = '#57606a', dash = false } = {}) {
+  let d = `M ${x1} ${y1}`;
+  if (via) for (let i = 0; i < via.length; i += 2) d += ` L ${via[i]} ${via[i + 1]}`;
+  d += ` L ${x2} ${y2}`;
+  return path(d, {
+    stroke: color, 'stroke-width': 1.5,
+    'stroke-dasharray': dash ? '5 3' : 'none',
+    'marker-end': `url(#m-${color === '#57606a' ? 'gray' :
+                           color === '#0969da' ? 'blue' :
+                           color === '#c7366a' ? 'pink' :
+                           color === '#cf222e' ? 'red'  : 'orange'})`,
+  });
+}
+
+// ─── Layout positions ─────────────────────────────────────────────────────────
+//
+//  [Internet] |←gap→| [  AWS region  ........  ]
+//             |       [ VPC [ SG [ EC2 ] ]  ECR ]  ← [GitHub Actions]
+//             |       [               SM        ]
+//             |       [               S3        ]
+//             |       [               IAM OIDC  ]
+//
+// Internet is to the LEFT of AWS box.
+// GitHub Actions is to the RIGHT of AWS box (outside).
+// Arrows are strictly horizontal or vertical (L-shaped at most).
+
+const GH = { x: 796, y: 8,   w: 164, h: 56 };  // GitHub Actions (right, outside AWS)
+const IN = { x: 8,   y: 278, w: 134, h: 56 };  // Internet (left, outside AWS)
+
+// AWS region
+const AW = { x: 150, y: 8, w: 638, h: 666 };
+
+// VPC / SG / EC2 (nested, left side of AWS)
+const VP = { x: 166, y: 46, w: 468, h: 606 };
+const SG = { x: 182, y: 78, w: 436, h: 558 };
+const EC = { x: 198, y: 108, w: 404, h: 508 };
+
+// Services inside EC2
+const SV_Y = 158, SV_H = 78;
+const API  = { x: 216, w: 118 };
+const GRF  = { x: 348, w: 118 };
+const PRO  = { x: 480, w: 118 };
+
+// Inside EC2 — supporting sections
+const DC_Y  = SV_Y + SV_H + 12;          // docker compose note  y
+const IAM_P_Y = DC_Y + 28 + 12;          // IAM Profile          y
+const UD_Y  = IAM_P_Y + 90 + 12;         // User Data            y
+
+// Right column supporting services (x fixed, y varies)
+const RC_X = 166 + 468 + 18;             // = 652  (right of VPC + gap)
+const RC_W = AW.x + AW.w - RC_X - 8;    // fills to right of AWS = 638+150-652-8 = 128... too narrow
+
+// Let me recalculate: AWS right edge = 150+638=788. RC_X=652. RC_W = 788-652-10 = 126.
+// That's too narrow. Let me widen AWS.
+// Actually I defined AW.w=638 above. Let me fix: the right column needs ~240px.
+// RC_X = 652, RC_W = 240 → RC right = 892. AWS right = 892+10 = 902. AW.w = 902-150 = 752.
+
+// Re-declare (using object mutation to keep the layout in one place):
+Object.assign(AW, { w: 754 });  // AWS box widened
+const RC = { x: 654, w: AW.x + AW.w - 654 - 8 };  // 150+754-654-8 = 242
+
+// GitHub Actions: right of AWS box
+Object.assign(GH, { x: AW.x + AW.w + 8 });  // x = 150+754+8 = 912
+
+// Total SVG width = GH.x + GH.w + 8 = 912+164+8 = 1084. Update viewBox.
+svg.setAttribute('width',   GH.x + GH.w + 8);
+svg.setAttribute('viewBox', `0 0 ${GH.x + GH.w + 8} 682`);
+
+const RC_ECR  = { x: RC.x, y:  54, w: RC.w, h: 112 };
+const RC_SM   = { x: RC.x, y: 186, w: RC.w, h: 124 };
+const RC_S3   = { x: RC.x, y: 330, w: RC.w, h:  82 };
+const RC_IAM  = { x: RC.x, y: 432, w: RC.w, h: 124 };
+
+// ─── Draw ─────────────────────────────────────────────────────────────────────
+
+rect(0, 0, svg.getAttribute('width'), 682, { fill: '#fff' });
+
+// ── External actors ──────────────────────────────────────────────────────────
+{
+  const g = card(IN.x, IN.y, IN.w, IN.h, '🌐 Internet', 'clientes / browsers',
+    { stroke: '#57606a', fill: '#f6f8fa' });
+  tip_on(g, 'Tráfico público',
+    'Clientes externos acceden a la API (:8000), Grafana (:3000) y Prometheus (:9090)<br>filtrando por el Security Group.');
+}
+{
+  const g = card(GH.x, GH.y, GH.w, GH.h, '⚙ GitHub Actions', 'CI + CD pipeline',
+    { stroke: '#24292f', fill: '#f6f8fa' });
+  tip_on(g, 'GitHub Actions',
+    'Lint, tests y Trivy en cada PR.<br>En merge: construye imagen Docker, pushea a ECR y dispara deploy via SSM.');
+}
+
+// ── AWS region ───────────────────────────────────────────────────────────────
+{
+  const g = boundary(AW.x, AW.y, AW.w, AW.h, {
+    label: 'AWS  us-east-2', color: '#e07800', fill: '#fff8ee',
+  });
+  rect(AW.x + AW.w - 136, AW.y + 6, 128, 20, { rx: 4, fill: '#e07800' }, g);
+  text('staging  ·  prod', AW.x + AW.w - 72, AW.y + 19, {
+    'text-anchor': 'middle', fill: '#fff', 'font-size': 10, 'font-weight': 600,
+  }, g);
+  tip_on(g, 'AWS us-east-2 (Ohio)',
+    'Toda la infraestructura en una región.<br>Dos workspaces Terraform: staging (develop) y prod (main).');
+}
+
+// ── VPC ───────────────────────────────────────────────────────────────────────
+{
+  const g = boundary(VP.x, VP.y, VP.w, VP.h, {
+    label: 'Default VPC', color: '#8250df', fill: '#faf8ff', dashed: true,
+  });
+  tip_on(g, 'Default VPC', 'VPC por defecto de la cuenta. No se creó una VPC custom para mantener la infra simple.');
+}
+
+// ── Security Group ────────────────────────────────────────────────────────────
+{
+  const g = boundary(SG.x, SG.y, SG.w, SG.h, {
+    label: 'Security Group · app-{env}', color: '#cf222e', fill: '#fff',
+  });
+  const pills = [[':8000', 106], [':3000', 212], [':9090', 318]];
+  for (const [port, ox] of pills) {
+    rect(SG.x + ox, SG.y + 4, 88, 18, { rx: 9, fill: '#fff0f0', stroke: '#cf222e', 'stroke-width': 1 }, g);
+    text(port, SG.x + ox + 44, SG.y + 16, {
+      'text-anchor': 'middle', fill: '#cf222e', 'font-size': 9, 'font-weight': 600,
+    }, g);
+  }
+  tip_on(g, 'Security Group — app-{env}',
+    'Inbound: :8000 (API), :3000 (Grafana), :9090 (Prometheus) desde 0.0.0.0/0<br>Outbound: todo permitido.');
+}
+
+// ── EC2 ───────────────────────────────────────────────────────────────────────
+{
+  const g = boundary(EC.x, EC.y, EC.w, EC.h, {
+    label: 'EC2  ·  t3.micro  ·  Amazon Linux 2023',
+    color: '#e07800', fill: '#fff9f2', headerColor: '#e07800',
+  });
+  tip_on(g, 'EC2 t3.micro — app-{env}',
+    'Una sola instancia corre toda la stack: API + Prometheus + Grafana via docker compose.<br>AMI: al2023-ami-*-x86_64');
+}
+
+// ── Services ──────────────────────────────────────────────────────────────────
+{
+  const g = card(API.x, SV_Y, API.w, SV_H, 'FastAPI', ':8000 · /forecast',
+    { stroke: '#0969da', fill: '#ddf4ff', tc: '#0969da' });
+  tip_on(g, 'FastAPI', 'Endpoints: /v1/forecast, /v1/wells<br>Auth via X-API-Key<br>Expone /metrics para Prometheus');
+}
+{
+  const g = card(GRF.x, SV_Y, GRF.w, SV_H, 'Grafana', ':3000 · dashboards',
+    { stroke: '#e6711a', fill: '#fff4e0', tc: '#bc4c00' });
+  tip_on(g, 'Grafana', 'Dashboards de requests, errores y latencia.<br>Credenciales desde Secrets Manager.<br>Provisionado desde grafana/provisioning/');
+}
+{
+  const g = card(PRO.x, SV_Y, PRO.w, SV_H, 'Prometheus', ':9090 · scrape',
+    { stroke: '#cf222e', fill: '#fff0f0', tc: '#cf222e' });
+  tip_on(g, 'Prometheus', 'Scrape la API cada 15s en /metrics<br>Métricas: requests_total, errors_total, duration_seconds');
+}
+
+// Prometheus → API scrape arrow (right to left)
+arrow(PRO.x - 2, SV_Y + SV_H / 2, API.x + API.w + 4, SV_Y + SV_H / 2, null,
+  { color: '#cf222e', dash: true });
+text('scrape', (PRO.x + API.x + API.w) / 2, SV_Y + SV_H / 2 - 6, {
+  'text-anchor': 'middle', fill: '#cf222e', 'font-size': 8,
+});
+
+// docker compose note
+{
+  const g = group();
+  rect(API.x, DC_Y, PRO.x + PRO.w - API.x, 26, {
+    rx: 4, fill: '#f6f8fa', stroke: '#d0d7de', 'stroke-width': 1,
+  }, g);
+  text('docker compose  —  API + Prometheus + Grafana en el mismo host',
+    (API.x + PRO.x + PRO.w) / 2, DC_Y + 17, {
+    'text-anchor': 'middle', fill: '#57606a', 'font-size': 10,
+  }, g);
+  tip_on(g, 'docker compose', 'Toda la stack corre en un único host para minimizar costos (un solo t3.micro).');
+}
+
+// IAM Instance Profile
+{
+  const g = group();
+  rect(API.x, IAM_P_Y, PRO.x + PRO.w - API.x, 88, {
+    rx: 6, fill: '#f6f8fa', stroke: '#d0d7de', 'stroke-width': 1, 'stroke-dasharray': '4 3',
+  }, g);
+  text('IAM Instance Profile — ec2-app-{env}', API.x + 12, IAM_P_Y + 16, {
+    fill: '#57606a', 'font-size': 10, 'font-weight': 700,
+  }, g);
+  const perms = [['ECR', 'pull image', 0], ['Secrets Manager', 'read secrets', 148], ['SSM', 'Managed\nInstanceCore', 296]];
+  for (const [label, sub, ox] of perms) {
+    rect(API.x + 8 + ox, IAM_P_Y + 26, 132, 50, {
+      rx: 5, fill: '#fff', stroke: '#d0d7de', 'stroke-width': 1,
+    }, g);
+    text(label, API.x + 74 + ox, IAM_P_Y + 46, {
+      'text-anchor': 'middle', fill: '#24292f', 'font-size': 10, 'font-weight': 600,
+    }, g);
+    text(sub, API.x + 74 + ox, IAM_P_Y + 62, {
+      'text-anchor': 'middle', fill: '#57606a', 'font-size': 9,
+    }, g);
+  }
+  tip_on(g, 'IAM Instance Profile', 'Permite a EC2: pull ECR · leer Secrets Manager · recibir comandos SSM sin SSH.');
+}
+
+// User Data
+{
+  const g = group();
+  rect(API.x, UD_Y, PRO.x + PRO.w - API.x, 44, {
+    rx: 6, fill: '#f6f8fa', stroke: '#d0d7de', 'stroke-width': 1, 'stroke-dasharray': '4 3',
+  }, g);
+  text('User Data (bootstrap)', API.x + 12, UD_Y + 16, {
+    fill: '#57606a', 'font-size': 10, 'font-weight': 700,
+  }, g);
+  text('git clone  →  write .env (Secrets Manager)  →  docker compose up', API.x + 12, UD_Y + 32, {
+    fill: '#57606a', 'font-size': 9,
+  }, g);
+  tip_on(g, 'User Data — bootstrap al arrancar',
+    '1. Clona el repo (branch según workspace)<br>2. write_runtime_env.sh vuelca los secrets a .env<br>3. docker compose up');
+}
+
+// ── Right column ──────────────────────────────────────────────────────────────
+
+// ECR
+{
+  const g = boundary(RC_ECR.x, RC_ECR.y, RC_ECR.w, RC_ECR.h, {
+    label: 'ECR — api-{env}', color: '#c7366a', fill: '#fff0f6',
+  });
+  text('scan on push  ·  últimas 5 imágenes', RC_ECR.x + 12, RC_ECR.y + 34, {
+    fill: '#57606a', 'font-size': 9,
+  }, g);
+  tip_on(g, 'Amazon ECR — api-{env}',
+    'Registro privado Docker.<br>Scan de vulnerabilidades al pushear.<br>Lifecycle: retiene las últimas 5 imágenes.');
+}
+
+// Secrets Manager
+{
+  const g = boundary(RC_SM.x, RC_SM.y, RC_SM.w, RC_SM.h, {
+    label: 'Secrets Manager', color: '#cf222e', fill: '#fff5f5',
+  });
+  text('• api/api-key-{env}',           RC_SM.x + 14, RC_SM.y + 34, { fill: '#57606a', 'font-size': 9 }, g);
+  text('• grafana/admin-password-{env}', RC_SM.x + 14, RC_SM.y + 50, { fill: '#57606a', 'font-size': 9 }, g);
+  text('recovery: 0 días',               RC_SM.x + 14, RC_SM.y + 74, { fill: '#8b949e', 'font-size': 8 }, g);
+  tip_on(g, 'AWS Secrets Manager',
+    'API key y contraseña de Grafana.<br>Inyectados en .env por user_data al arrancar la instancia.<br>recovery_window = 0.');
+}
+
+// S3
+{
+  const g = boundary(RC_S3.x, RC_S3.y, RC_S3.w, RC_S3.h, {
+    label: 'S3 — ing-soft-tf-state', color: '#1a7f37', fill: '#f0fff4',
+  });
+  text('Terraform state backend', RC_S3.x + 12, RC_S3.y + 36, {
+    fill: '#57606a', 'font-size': 9,
+  }, g);
+  tip_on(g, 'S3 — Terraform state', 'Backend remoto compartido por los dos workspaces (staging y prod).');
+}
+
+// IAM OIDC
+{
+  const g = boundary(RC_IAM.x, RC_IAM.y, RC_IAM.w, RC_IAM.h, {
+    label: 'IAM OIDC — GitHub Actions', color: '#0969da', fill: '#f0f6ff',
+  });
+  text('Role: github-actions-cd',        RC_IAM.x + 14, RC_IAM.y + 34, { fill: '#57606a', 'font-size': 9 }, g);
+  text('• ECR: push (api-*)',             RC_IAM.x + 14, RC_IAM.y + 50, { fill: '#57606a', 'font-size': 9 }, g);
+  text('• SSM: SendCommand',              RC_IAM.x + 14, RC_IAM.y + 64, { fill: '#57606a', 'font-size': 9 }, g);
+  text('• SSM: GetCommandInvocation',     RC_IAM.x + 14, RC_IAM.y + 78, { fill: '#57606a', 'font-size': 9 }, g);
+  rect(RC_IAM.x + RC_IAM.w - 72, RC_IAM.y + 92, 62, 18, { rx: 3, fill: '#ddf4ff', stroke: '#0969da', 'stroke-width': 1 }, g);
+  text('prod only', RC_IAM.x + RC_IAM.w - 41, RC_IAM.y + 104, {
+    'text-anchor': 'middle', fill: '#0969da', 'font-size': 8, 'font-weight': 600,
+  }, g);
+  tip_on(g, 'IAM OIDC — GitHub Actions',
+    'Trust policy: solo tokens de main/develop.<br>GitHub Actions asume el rol via OIDC, sin claves estáticas.<br>Solo existe en workspace prod.');
+}
+
+// ─── Arrows ───────────────────────────────────────────────────────────────────
+//
+// 1. Internet → SG/EC2 (public HTTP)   L-shape: enters at services row
+// 2. EC2 → ECR (pull image)            from IAM Profile (ECR perm card)
+// 3. EC2 → Secrets Manager (read)      from User Data (bootstrap)
+// 4. GitHub Actions → ECR              CI push, via 4px gap between AWS and GH
+// 5. GitHub Actions → IAM OIDC         OIDC handshake, dashed
+// 6. IAM OIDC → EC2 (SSM deploy)       enters at User Data, above the read arrow
+
+const EC2_RIGHT       = EC.x + EC.w;
+const SVC_MID_Y       = SV_Y + SV_H / 2;
+const ECR_PERM_MID_Y  = IAM_P_Y + 51;     // middle of perm cards row in IAM Profile
+const PUSH_TURN_X     = AW.x + AW.w + 4;  // tight gap between AWS and GH
+
+// --- 1. Internet → SG (public HTTP) ---
+const INT_TURN_X = (IN.x + IN.w + SG.x) / 2;
+arrow(IN.x + IN.w, IN.y + IN.h / 2, SG.x - 2, SVC_MID_Y,
+  [INT_TURN_X, IN.y + IN.h / 2, INT_TURN_X, SVC_MID_Y],
+  { color: '#57606a' });
+text(':8000  :3000  :9090', IN.x + IN.w + 6, IN.y + IN.h / 2 - 6, {
+  fill: '#57606a', 'font-size': 9,
+});
+
+// --- 2. EC2 → ECR (pull image, runtime) ---
+const PULL_TURN_X = EC2_RIGHT + 28;
+const ECR_END_Y   = RC_ECR.y + RC_ECR.h - 28;
+arrow(EC2_RIGHT, ECR_PERM_MID_Y, RC_ECR.x - 2, ECR_END_Y,
+  [PULL_TURN_X, ECR_PERM_MID_Y, PULL_TURN_X, ECR_END_Y],
+  { color: '#c7366a' });
+text('pull', PULL_TURN_X + 4, ECR_PERM_MID_Y - 6, { fill: '#c7366a', 'font-size': 9 });
+
+// --- 3. EC2 → Secrets Manager (read, bootstrap) ---
+const READ_TURN_X = EC2_RIGHT + 14;
+const READ_OUT_Y  = UD_Y + 30;
+const SM_END_Y    = RC_SM.y + RC_SM.h - 28;
+arrow(EC2_RIGHT, READ_OUT_Y, RC_SM.x - 2, SM_END_Y,
+  [READ_TURN_X, READ_OUT_Y, READ_TURN_X, SM_END_Y],
+  { color: '#cf222e' });
+text('read', READ_TURN_X + 4, READ_OUT_Y - 6, { fill: '#cf222e', 'font-size': 9 });
+
+// --- 4. GitHub Actions → ECR (CI push) ---
+const GH_MID_Y = GH.y + GH.h / 2;
+arrow(GH.x - 2, GH_MID_Y, RC_ECR.x + RC_ECR.w + 2, RC_ECR.y + 24,
+  [PUSH_TURN_X, GH_MID_Y, PUSH_TURN_X, RC_ECR.y + 24],
+  { color: '#0969da' });
+text('push image', PUSH_TURN_X + 6, RC_ECR.y + 16, { fill: '#0969da', 'font-size': 9 });
+
+// --- 5. GitHub Actions → IAM OIDC (auth) ---
+const OIDC_DOWN_X = GH.x + GH.w / 2;
+const OIDC_BEND_Y = RC_IAM.y - 14;
+const OIDC_END_X  = RC_IAM.x + RC_IAM.w / 2;
+arrow(OIDC_DOWN_X, GH.y + GH.h, OIDC_END_X, RC_IAM.y - 2,
+  [OIDC_DOWN_X, OIDC_BEND_Y, OIDC_END_X, OIDC_BEND_Y],
+  { color: '#0969da', dash: true });
+text('OIDC', OIDC_DOWN_X + 6, (GH.y + GH.h + RC_IAM.y) / 2, {
+  fill: '#0969da', 'font-size': 9,
+});
+
+// --- 6. IAM OIDC → EC2 (SSM deploy) ---
+const IAM_MID_Y   = RC_IAM.y + RC_IAM.h / 2;
+const SSM_TURN_X  = EC2_RIGHT + 38;
+const SSM_END_Y   = UD_Y + 14;
+arrow(RC_IAM.x - 2, IAM_MID_Y, EC.x + EC.w + 2, SSM_END_Y,
+  [SSM_TURN_X, IAM_MID_Y, SSM_TURN_X, SSM_END_Y],
+  { color: '#0969da' });
+text('SSM deploy', SSM_TURN_X, RC_IAM.y - 6, {
+  fill: '#0969da', 'font-size': 9, 'text-anchor': 'middle',
+});
+</script>
+</body>
+</html>
