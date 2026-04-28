@@ -173,8 +173,10 @@ const EC = { x: 198, y: 108, w: 404, h: 508 };
 // Services inside EC2
 const SV_Y = 158, SV_H = 78;
 const API  = { x: 216, w: 118 };
-const GRF  = { x: 348, w: 118 };
-const PRO  = { x: 480, w: 118 };
+const PRO  = { x: 348, w: 118 };
+const GRF  = { x: 480, w: 118 };
+// Right edge of the services row (used for boxes that span the whole row)
+const SVC_RIGHT_X = GRF.x + GRF.w;
 
 // Inside EC2 — supporting sections
 const DC_Y  = SV_Y + SV_H + 12;          // docker compose note  y
@@ -250,10 +252,11 @@ rect(0, 0, svg.getAttribute('width'), 682, { fill: '#fff' });
   const g = boundary(SG.x, SG.y, SG.w, SG.h, {
     label: 'Security Group · app-{env}', color: '#cf222e', fill: '#fff',
   });
-  const pills = [[':8000', 106], [':3000', 212], [':9090', 318]];
+  const PILL_W = 80;
+  const pills = [[':8000', 174], [':3000', 260], [':9090', 346]];
   for (const [port, ox] of pills) {
-    rect(SG.x + ox, SG.y + 4, 88, 18, { rx: 9, fill: '#fff0f0', stroke: '#cf222e', 'stroke-width': 1 }, g);
-    text(port, SG.x + ox + 44, SG.y + 16, {
+    rect(SG.x + ox, SG.y + 4, PILL_W, 18, { rx: 9, fill: '#fff0f0', stroke: '#cf222e', 'stroke-width': 1 }, g);
+    text(port, SG.x + ox + PILL_W / 2, SG.y + 16, {
       'text-anchor': 'middle', fill: '#cf222e', 'font-size': 9, 'font-weight': 600,
     }, g);
   }
@@ -298,11 +301,11 @@ text('scrape', (PRO.x + API.x + API.w) / 2, SV_Y + SV_H / 2 - 6, {
 // docker compose note
 {
   const g = group();
-  rect(API.x, DC_Y, PRO.x + PRO.w - API.x, 26, {
+  rect(API.x, DC_Y, SVC_RIGHT_X - API.x, 26, {
     rx: 4, fill: '#f6f8fa', stroke: '#d0d7de', 'stroke-width': 1,
   }, g);
   text('docker compose  —  API + Prometheus + Grafana en el mismo host',
-    (API.x + PRO.x + PRO.w) / 2, DC_Y + 17, {
+    (API.x + SVC_RIGHT_X) / 2, DC_Y + 17, {
     'text-anchor': 'middle', fill: '#57606a', 'font-size': 10,
   }, g);
   tip_on(g, 'docker compose', 'Toda la stack corre en un único host para minimizar costos (un solo t3.micro).');
@@ -311,21 +314,22 @@ text('scrape', (PRO.x + API.x + API.w) / 2, SV_Y + SV_H / 2 - 6, {
 // IAM Instance Profile
 {
   const g = group();
-  rect(API.x, IAM_P_Y, PRO.x + PRO.w - API.x, 88, {
+  rect(API.x, IAM_P_Y, SVC_RIGHT_X - API.x, 88, {
     rx: 6, fill: '#f6f8fa', stroke: '#d0d7de', 'stroke-width': 1, 'stroke-dasharray': '4 3',
   }, g);
   text('IAM Instance Profile — ec2-app-{env}', API.x + 12, IAM_P_Y + 16, {
     fill: '#57606a', 'font-size': 10, 'font-weight': 700,
   }, g);
-  const perms = [['ECR', 'pull image', 0], ['Secrets Manager', 'read secrets', 148], ['SSM', 'Managed\nInstanceCore', 296]];
+  const PERM_W = 110;
+  const perms = [['ECR', 'pull image', 0], ['Secrets Manager', 'read secrets', 124], ['SSM', 'ManagedInstanceCore', 248]];
   for (const [label, sub, ox] of perms) {
-    rect(API.x + 8 + ox, IAM_P_Y + 26, 132, 50, {
+    rect(API.x + 8 + ox, IAM_P_Y + 26, PERM_W, 50, {
       rx: 5, fill: '#fff', stroke: '#d0d7de', 'stroke-width': 1,
     }, g);
-    text(label, API.x + 74 + ox, IAM_P_Y + 46, {
+    text(label, API.x + 8 + ox + PERM_W / 2, IAM_P_Y + 46, {
       'text-anchor': 'middle', fill: '#24292f', 'font-size': 10, 'font-weight': 600,
     }, g);
-    text(sub, API.x + 74 + ox, IAM_P_Y + 62, {
+    text(sub, API.x + 8 + ox + PERM_W / 2, IAM_P_Y + 62, {
       'text-anchor': 'middle', fill: '#57606a', 'font-size': 9,
     }, g);
   }
@@ -335,7 +339,7 @@ text('scrape', (PRO.x + API.x + API.w) / 2, SV_Y + SV_H / 2 - 6, {
 // User Data
 {
   const g = group();
-  rect(API.x, UD_Y, PRO.x + PRO.w - API.x, 44, {
+  rect(API.x, UD_Y, SVC_RIGHT_X - API.x, 44, {
     rx: 6, fill: '#f6f8fa', stroke: '#d0d7de', 'stroke-width': 1, 'stroke-dasharray': '4 3',
   }, g);
   text('User Data (bootstrap)', API.x + 12, UD_Y + 16, {
@@ -404,54 +408,62 @@ text('scrape', (PRO.x + API.x + API.w) / 2, SV_Y + SV_H / 2 - 6, {
 
 // ─── Arrows ───────────────────────────────────────────────────────────────────
 //
-// 1. Internet → SG/EC2 (public HTTP)   L-shape: enters at services row
-// 2. EC2 → ECR (pull image)            from IAM Profile (ECR perm card)
-// 3. EC2 → Secrets Manager (read)      from User Data (bootstrap)
-// 4. GitHub Actions → ECR              CI push, via 4px gap between AWS and GH
-// 5. GitHub Actions → IAM OIDC         OIDC handshake, dashed
-// 6. IAM OIDC → EC2 (SSM deploy)       enters at User Data, above the read arrow
+// All EC2-side arrows cross the right edge at three distinct Y levels inside
+// the User Data box, with three distinct turn-X values inside the gap between
+// EC2 and the right-column services. This avoids overlapping segments and
+// keeps the labels readable.
 
-const EC2_RIGHT       = EC.x + EC.w;
-const SVC_MID_Y       = SV_Y + SV_H / 2;
-const ECR_PERM_MID_Y  = IAM_P_Y + 51;     // middle of perm cards row in IAM Profile
-const PUSH_TURN_X     = AW.x + AW.w + 4;  // tight gap between AWS and GH
+const EC2_RIGHT   = EC.x + EC.w;
+const SVC_MID_Y   = SV_Y + SV_H / 2;
+const PUSH_TURN_X = AW.x + AW.w + 4;       // narrow gap between AWS box and GH
+
+// Three Y levels inside User Data box (UD_Y .. UD_Y+44)
+const PULL_OUT_Y = UD_Y + 8;
+const SSM_IN_Y   = UD_Y + 22;
+const READ_OUT_Y = UD_Y + 36;
+
+// Three turn-X values in the gap between EC2 right edge and right column
+const PULL_TURN_X = EC2_RIGHT + 32;
+const READ_TURN_X = EC2_RIGHT + 16;
+const SSM_TURN_X  = EC2_RIGHT + 48;
 
 // --- 1. Internet → SG (public HTTP) ---
 const INT_TURN_X = (IN.x + IN.w + SG.x) / 2;
 arrow(IN.x + IN.w, IN.y + IN.h / 2, SG.x - 2, SVC_MID_Y,
   [INT_TURN_X, IN.y + IN.h / 2, INT_TURN_X, SVC_MID_Y],
   { color: '#57606a' });
-text(':8000  :3000  :9090', IN.x + IN.w + 6, IN.y + IN.h / 2 - 6, {
-  fill: '#57606a', 'font-size': 9,
-});
 
 // --- 2. EC2 → ECR (pull image, runtime) ---
-const PULL_TURN_X = EC2_RIGHT + 28;
-const ECR_END_Y   = RC_ECR.y + RC_ECR.h - 28;
-arrow(EC2_RIGHT, ECR_PERM_MID_Y, RC_ECR.x - 2, ECR_END_Y,
-  [PULL_TURN_X, ECR_PERM_MID_Y, PULL_TURN_X, ECR_END_Y],
+const ECR_END_Y = RC_ECR.y + RC_ECR.h - 28;
+arrow(EC2_RIGHT, PULL_OUT_Y, RC_ECR.x - 2, ECR_END_Y,
+  [PULL_TURN_X, PULL_OUT_Y, PULL_TURN_X, ECR_END_Y],
   { color: '#c7366a' });
-text('pull', PULL_TURN_X + 4, ECR_PERM_MID_Y - 6, { fill: '#c7366a', 'font-size': 9 });
+text('pull', PULL_TURN_X + 4, PULL_OUT_Y - 4, {
+  fill: '#c7366a', 'font-size': 9,
+});
 
 // --- 3. EC2 → Secrets Manager (read, bootstrap) ---
-const READ_TURN_X = EC2_RIGHT + 14;
-const READ_OUT_Y  = UD_Y + 30;
-const SM_END_Y    = RC_SM.y + RC_SM.h - 28;
+const SM_END_Y = RC_SM.y + RC_SM.h - 28;
 arrow(EC2_RIGHT, READ_OUT_Y, RC_SM.x - 2, SM_END_Y,
   [READ_TURN_X, READ_OUT_Y, READ_TURN_X, SM_END_Y],
   { color: '#cf222e' });
-text('read', READ_TURN_X + 4, READ_OUT_Y - 6, { fill: '#cf222e', 'font-size': 9 });
+text('read', READ_TURN_X + 4, READ_OUT_Y + 12, {
+  fill: '#cf222e', 'font-size': 9,
+});
 
 // --- 4. GitHub Actions → ECR (CI push) ---
 const GH_MID_Y = GH.y + GH.h / 2;
 arrow(GH.x - 2, GH_MID_Y, RC_ECR.x + RC_ECR.w + 2, RC_ECR.y + 24,
   [PUSH_TURN_X, GH_MID_Y, PUSH_TURN_X, RC_ECR.y + 24],
   { color: '#0969da' });
-text('push image', PUSH_TURN_X + 6, RC_ECR.y + 16, { fill: '#0969da', 'font-size': 9 });
+text('push image', GH.x + 4, GH.y + GH.h + 14, {
+  fill: '#0969da', 'font-size': 9,
+});
 
 // --- 5. GitHub Actions → IAM OIDC (auth) ---
+// Down outside AWS, bend at gap between S3 and IAM OIDC, into IAM top.
 const OIDC_DOWN_X = GH.x + GH.w / 2;
-const OIDC_BEND_Y = RC_IAM.y - 14;
+const OIDC_BEND_Y = RC_IAM.y - 8;
 const OIDC_END_X  = RC_IAM.x + RC_IAM.w / 2;
 arrow(OIDC_DOWN_X, GH.y + GH.h, OIDC_END_X, RC_IAM.y - 2,
   [OIDC_DOWN_X, OIDC_BEND_Y, OIDC_END_X, OIDC_BEND_Y],
@@ -461,13 +473,11 @@ text('OIDC', OIDC_DOWN_X + 6, (GH.y + GH.h + RC_IAM.y) / 2, {
 });
 
 // --- 6. IAM OIDC → EC2 (SSM deploy) ---
-const IAM_MID_Y   = RC_IAM.y + RC_IAM.h / 2;
-const SSM_TURN_X  = EC2_RIGHT + 38;
-const SSM_END_Y   = UD_Y + 14;
-arrow(RC_IAM.x - 2, IAM_MID_Y, EC.x + EC.w + 2, SSM_END_Y,
-  [SSM_TURN_X, IAM_MID_Y, SSM_TURN_X, SSM_END_Y],
+const IAM_MID_Y = RC_IAM.y + RC_IAM.h / 2;
+arrow(RC_IAM.x - 2, IAM_MID_Y, EC.x + EC.w + 2, SSM_IN_Y,
+  [SSM_TURN_X, IAM_MID_Y, SSM_TURN_X, SSM_IN_Y],
   { color: '#0969da' });
-text('SSM deploy', SSM_TURN_X, RC_IAM.y - 6, {
+text('SSM deploy', SSM_TURN_X, RC_IAM.y - 8, {
   fill: '#0969da', 'font-size': 9, 'text-anchor': 'middle',
 });
 </script>
