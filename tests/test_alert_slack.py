@@ -1,14 +1,12 @@
 """Test that alerts are properly sent to Slack."""
 
-
 import asyncio
+import os
 import time
 from typing import Optional
-import os
-import sys
-import httpx
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import httpx
+from dotenv import load_dotenv
 
 from app.alerts import (
     AlertConfig,
@@ -19,8 +17,6 @@ from app.alerts import (
     ServiceDownDetector,
 )
 from app.alerts.detectors import MetricsProvider
-
-# antes de arrancar hacer cd ..  
 
 
 class PrometheusMetricsProvider(MetricsProvider):
@@ -49,7 +45,7 @@ class PrometheusMetricsProvider(MetricsProvider):
                 return None
 
             return float(result[0]["value"][1])
-        except Exception as e:
+        except (httpx.HTTPError, ValueError, KeyError, IndexError) as e:
             print(f"⚠️  Error querying Prometheus: {e}")
             return None
 
@@ -81,16 +77,17 @@ class PrometheusMetricsProvider(MetricsProvider):
 async def generate_traffic_with_errors(
     api_url: str = "http://localhost:8000",
     duration: int = 30,
-):
+) -> None:
     """Generate HTTP traffic with intentional errors to trigger alerts."""
     print(f"🔄 Generating traffic with errors for {duration} seconds...")
-    print("   (Mixing valid requests with error 400s to spike error rate)\n")
+    print("   (Mixing valid requests with error 400s to spike error rate)")
+    print()
 
     async with httpx.AsyncClient() as client:
         headers = {"X-API-Key": os.getenv("API_KEY", "api_key")}
         start = time.time()
         request_count = 0
-        
+
         # Date range for forecast requests
         start_date = "2025-02-10"
         end_date = "2025-02-17"
@@ -124,31 +121,32 @@ async def generate_traffic_with_errors(
 
                 request_count += 1
                 await asyncio.sleep(0.3)
-            except Exception as e:
+            except httpx.RequestError as e:
                 print(f"  Request error: {type(e).__name__}")
 
-    print(f"✅ Generated {request_count} requests\n")
+    print(f"✅ Generated {request_count} requests")
+    print()
 
 
-async def main():
+async def main() -> None:
     """Test Slack integration."""
     print("=" * 70)
     print("SLACK ALERT TEST - Verify alerts are sent to Slack")
-    print("=" * 70 + "\n")
+    print("=" * 70)
+    print()
 
     # 1. Verify Slack webhook is configured
-    import os
-    from dotenv import load_dotenv
-
     load_dotenv()
     webhook_url = os.getenv("SLACK_WEBHOOK_URL")
 
     if not webhook_url or not webhook_url.strip():
         print("❌ ERROR: SLACK_WEBHOOK_URL not configured in .env")
-        print("   Add: SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...\n")
+        print("   Add: SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...")
+        print()
         return
 
-    print(f"✅ Slack webhook configured\n")
+    print("✅ Slack webhook configured")
+    print()
 
     # 2. Generate traffic
     await generate_traffic_with_errors()
@@ -156,7 +154,8 @@ async def main():
     # 3. Wait for Prometheus to scrape
     print("⏳ Waiting for Prometheus scrape (6 seconds)...")
     await asyncio.sleep(6)
-    print("✅ Ready\n")
+    print("✅ Ready")
+    print()
 
     # 4. Create metrics provider
     prometheus_provider = PrometheusMetricsProvider()
@@ -177,10 +176,12 @@ async def main():
         if error_rate
         else "  Error Rate:       No data"
     )
-    print(f"  Request Count:    {request_count} requests/30s\n")
+    print(f"  Request Count:    {request_count} requests/30s")
+    print()
 
     # 6. Create scheduler with SlackNotifier
-    print("🚀 Creating alerts with SlackNotifier...\n")
+    print("🚀 Creating alerts with SlackNotifier...")
+    print()
 
     config = AlertConfig(
         latency_threshold=0.1,  # 100ms (likely to trigger)
@@ -199,7 +200,8 @@ async def main():
     scheduler = AlertScheduler(config, slack_notifier, detectors)
 
     # 7. Run detectors (this will send alerts to Slack)
-    print("🔍 Running alert detectors and sending to Slack...\n")
+    print("🔍 Running alert detectors and sending to Slack...")
+    print()
     await scheduler.check_alerts(prometheus_provider)
 
     print("=" * 70)
