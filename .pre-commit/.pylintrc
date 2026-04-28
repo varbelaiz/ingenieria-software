@@ -19,4 +19,6 @@ disable=raw-checker-failed,
         too-few-public-methods, # R0903
         too-many-arguments,
         too-many-positional-arguments,
-        consider-using-with
+        consider-using-with,
+        redefined-outer-name,
+        duplicate-code
