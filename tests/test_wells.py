@@ -3,10 +3,11 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests import TEST_API_KEY
 
 
 client = TestClient(app)
-VALID_HEADERS = {"X-API-Key": "abcdef12345"}
+VALID_HEADERS = {"X-API-Key": TEST_API_KEY}
 
 
 def test_get_wells_returns_200_with_expected_json_structure() -> None:
@@ -18,9 +19,12 @@ def test_get_wells_returns_200_with_expected_json_structure() -> None:
     assert response.status_code == 200
 
     payload = response.json()
-    assert payload["date_query"] == "2026-04-28"
-    assert isinstance(payload["wells"], list)
-    assert payload["wells"] == ["POZO-001", "POZO-002", "POZO-003"]
+    assert isinstance(payload, list)
+    assert payload == [
+        {"id_well": "POZO-001"},
+        {"id_well": "POZO-002"},
+        {"id_well": "POZO-003"},
+    ]
 
 
 def test_get_wells_returns_422_when_missing_date_query() -> None:
