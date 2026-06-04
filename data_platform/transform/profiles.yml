@@ -1,0 +1,12 @@
+ingenieria_software:
+  target: local
+  outputs:
+    local:
+      type: postgres
+      host: "{{ env_var('DBT_WAREHOUSE_HOST', 'localhost') }}"
+      port: "{{ env_var('DBT_WAREHOUSE_PORT', '5433') | int }}"
+      user: "{{ env_var('DBT_WAREHOUSE_USER', 'warehouse') }}"
+      password: "{{ env_var('DBT_WAREHOUSE_PASSWORD', 'warehouse') }}"
+      dbname: "{{ env_var('DBT_WAREHOUSE_DB', 'warehouse') }}"
+      schema: bronze
+      threads: 4
