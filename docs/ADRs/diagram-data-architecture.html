@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arquitectura de Datos — Fase 2</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1 { color: #58a6ff; font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.subtitle { color: #8b949e; margin-top: 0; margin-bottom: 2rem; font-size: 0.9rem; }
+    .mermaid { background: #161b22; border-radius: 8px; padding: 2rem; }
+  </style>
+</head>
+<body>
+  <h1>Arquitectura de Datos — Fase 2: Plataforma de Datos</h1>
+  <p class="subtitle">Stack: Dagster · PostgreSQL · dbt · DataHub · Metabase</p>
+
+  <div class="mermaid">
+flowchart TD
+    subgraph Fuentes["🌐 Fuentes externas"]
+        S1["datos.gob.ar\nProducción pozos"]
+        S2["datos.gob.ar\nListado pozos"]
+    end
+
+    subgraph Orq["⚙️ Orquestación — Dagster"]
+        DAG["Assets particionados\n+ RetryPolicy backoff\n+ Schedule mensual"]
+    end
+
+    subgraph PG["🐘 PostgreSQL 16 — Warehouse"]
+        B["📦 Schema: bronze\nDatos crudos\nparticionados"]
+        SL["🔧 Schema: silver\nLimpieza · tipado\ndedup · merge"]
+        G["⭐ Schema: gold\nModelo estrella\nfct + dims"]
+        QM["✅ quality_marks\n(vista resumen checks)"]
+        TF["🔴 dbt_test_failures\n(store_failures)"]
+    end
+
+    subgraph DBT["🔄 dbt — Transformación"]
+        BR["stg_produccion.sql\nstg_pozos.sql"]
+        DIM["dim_pozo · dim_empresa\ndim_cuenca · dim_area\ndim_fecha · dim_tipo_recurso"]
+        FCT["fct_produccion\ngrano: pozo × mes"]
+    end
+
+    subgraph Gov["🏛️ DataHub — Gobierno"]
+        LIN["Lineage tabla\nbronze → silver → gold"]
+        FRE["Freshness"]
+        WFL["Workflows Dagster"]
+    end
+
+    subgraph BI["📊 Metabase — BI"]
+        DASH["Dashboards\nProducción · Cuencas\nOperadoras · Calidad"]
+    end
+
+    S1 --> DAG
+    S2 --> DAG
+    DAG --> B
+    B --> BR
+    BR --> SL
+    SL --> DIM
+    SL --> FCT
+    DIM --> G
+    FCT --> G
+    G --> QM
+    G --> TF
+    G --> DASH
+    G --> LIN
+    LIN --> FRE
+    LIN --> WFL
+
+    classDef bronze fill:#7c4a00,stroke:#f0a500,color:#fff
+    classDef silver fill:#1f3a5f,stroke:#4a90d9,color:#fff
+    classDef gold fill:#3a3000,stroke:#d4af37,color:#fff
+    classDef ext fill:#1a2a1a,stroke:#3fb950,color:#fff
+    classDef tool fill:#1a1a2e,stroke:#7c3aed,color:#fff
+
+    class B bronze
+    class SL silver
+    class G,QM,TF gold
+    class S1,S2 ext
+    class DAG,BR,DIM,FCT,LIN,FRE,WFL,DASH tool
+  </div>
+</body>
+</html>
