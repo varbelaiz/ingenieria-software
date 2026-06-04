@@ -1,0 +1,14 @@
+FROM python:3.10-slim
+
+ENV DAGSTER_HOME=/opt/dagster/dagster_home
+RUN mkdir -p $DAGSTER_HOME
+
+WORKDIR /opt/dagster/app
+
+RUN pip install uv --no-cache-dir
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --group data --no-dev --frozen
+
+COPY workspace.yaml ./
+COPY data_platform/ ./data_platform/
