@@ -1430,7 +1430,7 @@ data_platform/transform/models/gold/semantic/   # (bonus) vistas/métricas dbt
 
 | PR | Branch | Base | Estado | CI | Done |
 |----|--------|------|--------|-----|------|
-| 1 | `feature/data-platform-scaffolding` | develop | 🟡 en revisión | — | — |
+| 1 | `feature/data-platform-scaffolding` | develop | 🟡 en revisión | ⏳ push pendiente | — |
 | 2 | `feature/data-extraction-bronze` | PR1 | ⬜ pendiente | — | — |
 | 3 | `feature/silver-transformations` | PR2 | ⬜ pendiente | — | — |
 | 4 | `feature/gold-star-schema` | PR3 | ⬜ pendiente | — | — |
