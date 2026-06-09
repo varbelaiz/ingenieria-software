@@ -2,13 +2,13 @@
 
 from typing import Any
 
+from data_platform.extraction.bronze_loader import BronzeLoad, load_bronze_table
+
 
 def test_produccion_raw_has_source_and_technical_columns(
     warehouse_connection: Any,
 ) -> None:
     """The production bronze table should include raw and load metadata columns."""
-    from data_platform.extraction.bronze_loader import BronzeLoad, load_bronze_table
-
     load_bronze_table(
         warehouse_connection,
         BronzeLoad(
@@ -61,8 +61,6 @@ def test_pozos_raw_has_source_and_technical_columns(
     warehouse_connection: Any,
 ) -> None:
     """The wells bronze table should include raw and load metadata columns."""
-    from data_platform.extraction.bronze_loader import BronzeLoad, load_bronze_table
-
     load_bronze_table(
         warehouse_connection,
         BronzeLoad(

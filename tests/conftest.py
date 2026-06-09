@@ -1,11 +1,15 @@
 """Global test configuration and fixtures."""
 
 from collections.abc import Iterator
-import importlib.util
 import os
 from typing import Any
 
 import pytest
+
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 from app.alerts import AlertConfig, MockNotifier
 
@@ -29,10 +33,8 @@ def alert_config() -> AlertConfig:
 
 
 def _connect_to_test_warehouse() -> Any:
-    if importlib.util.find_spec("psycopg2") is None:
+    if psycopg2 is None:
         pytest.skip("psycopg2 is not installed")
-
-    import psycopg2
 
     return psycopg2.connect(
         host=os.getenv("TEST_WAREHOUSE_HOST", os.getenv("WAREHOUSE_HOST", "localhost")),
@@ -48,10 +50,8 @@ def _connect_to_test_warehouse() -> Any:
 @pytest.fixture
 def warehouse_connection() -> Iterator[Any]:
     """Provide a PostgreSQL connection for bronze integration tests."""
-    if importlib.util.find_spec("psycopg2") is None:
+    if psycopg2 is None:
         pytest.skip("psycopg2 is not installed")
-
-    import psycopg2
 
     try:
         conn = _connect_to_test_warehouse()

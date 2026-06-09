@@ -2,13 +2,13 @@
 
 from typing import Any
 
+from data_platform.extraction.bronze_loader import BronzeLoad, load_bronze_table
+
 
 def test_load_bronze_table_replaces_existing_partition(
     warehouse_connection: Any,
 ) -> None:
     """Running the same partition twice should not duplicate rows."""
-    from data_platform.extraction.bronze_loader import BronzeLoad, load_bronze_table
-
     first_load = BronzeLoad(
         table_name="produccion_raw",
         load_period="2026-06",
