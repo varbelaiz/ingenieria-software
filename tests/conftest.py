@@ -1,8 +1,15 @@
 """Global test configuration and fixtures."""
 
+from collections.abc import Iterator
 import os
+from typing import Any
 
 import pytest
+
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 from app.alerts import AlertConfig, MockNotifier
 
@@ -23,3 +30,35 @@ def alert_config() -> AlertConfig:
         error_rate_threshold=0.05,
         service_down_threshold=30,
     )
+
+
+def _connect_to_test_warehouse() -> Any:
+    if psycopg2 is None:
+        pytest.skip("psycopg2 is not installed")
+
+    return psycopg2.connect(
+        host=os.getenv("TEST_WAREHOUSE_HOST", os.getenv("WAREHOUSE_HOST", "localhost")),
+        port=int(os.getenv("TEST_WAREHOUSE_PORT", os.getenv("WAREHOUSE_PORT", "5433"))),
+        user=os.getenv("TEST_WAREHOUSE_USER", os.getenv("WAREHOUSE_USER", "warehouse")),
+        password=os.getenv(
+            "TEST_WAREHOUSE_PASSWORD", os.getenv("WAREHOUSE_PASSWORD", "warehouse")
+        ),
+        dbname=os.getenv("TEST_WAREHOUSE_DB", os.getenv("WAREHOUSE_DB", "warehouse")),
+    )
+
+
+@pytest.fixture
+def warehouse_connection() -> Iterator[Any]:
+    """Provide a PostgreSQL connection for bronze integration tests."""
+    if psycopg2 is None:
+        pytest.skip("psycopg2 is not installed")
+
+    try:
+        conn = _connect_to_test_warehouse()
+    except psycopg2.OperationalError as exc:
+        pytest.skip(f"PostgreSQL warehouse is not available: {exc}")
+
+    try:
+        yield conn
+    finally:
+        conn.close()
