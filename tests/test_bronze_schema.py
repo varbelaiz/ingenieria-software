@@ -1,8 +1,17 @@
 """Integration tests for bronze table schemas."""
 
+# pylint: disable=wrong-import-position
+
 from typing import Any
 
-from data_platform.extraction.bronze_loader import BronzeLoad, load_bronze_table
+import pytest
+
+pytest.importorskip("psycopg2")
+
+from data_platform.extraction.bronze_loader import (  # noqa: E402
+    BronzeLoad,
+    load_bronze_table,
+)
 
 
 def test_produccion_raw_has_source_and_technical_columns(
