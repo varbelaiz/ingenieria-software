@@ -3,6 +3,16 @@ version: 2
 models:
   - name: dim_pozo
     description: "Dimension de pozos con clave surrogate y columnas compatibles con SCD Tipo 2."
+    data_tests:
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: pozo_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: id_pozo
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: is_current
     columns:
       - name: pozo_key
         description: "Clave surrogate del pozo."
@@ -14,6 +24,30 @@ models:
         data_tests:
           - not_null
           - unique
+      - name: sigla
+        description: "Identificador visible del pozo."
+        data_tests:
+          - not_null
+      - name: formacion_productiva
+        description: "Formacion productiva informada para el pozo."
+        data_tests:
+          - not_null
+      - name: id_empresa
+        description: "Empresa operadora asociada al pozo."
+        data_tests:
+          - not_null
+      - name: area
+        description: "Area productiva asociada al pozo."
+        data_tests:
+          - not_null
+      - name: cuenca
+        description: "Cuenca asociada al pozo."
+        data_tests:
+          - not_null
+      - name: tipo_recurso
+        description: "Tipo de recurso del pozo."
+        data_tests:
+          - not_null
       - name: valid_from
         description: "Inicio de vigencia del registro actual."
         data_tests:
@@ -24,9 +58,22 @@ models:
         description: "Marca de registro vigente."
         data_tests:
           - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
 
   - name: dim_empresa
     description: "Dimension de empresas operadoras con clave surrogate y columnas compatibles con SCD Tipo 2."
+    data_tests:
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: empresa_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: id_empresa
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: is_current
     columns:
       - name: empresa_key
         description: "Clave surrogate de la empresa."
@@ -38,6 +85,10 @@ models:
         data_tests:
           - not_null
           - unique
+      - name: empresa
+        description: "Nombre visible de la empresa."
+        data_tests:
+          - not_null
       - name: valid_from
         description: "Inicio de vigencia del registro actual."
         data_tests:
@@ -46,6 +97,9 @@ models:
         description: "Marca de registro vigente."
         data_tests:
           - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
 
   - name: dim_area
     description: "Dimension de areas productivas."
@@ -91,6 +145,16 @@ models:
 
   - name: dim_fecha
     description: "Dimension calendario mensual para la produccion."
+    data_tests:
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: fecha_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: periodo
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: mes
     columns:
       - name: fecha_key
         description: "Clave surrogate del periodo mensual."
@@ -102,6 +166,22 @@ models:
         data_tests:
           - not_null
           - unique
+      - name: anio
+        description: "Anio calendario del periodo."
+        data_tests:
+          - not_null
+      - name: mes
+        description: "Mes calendario del periodo."
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                max_value: 12
+      - name: trimestre
+        description: "Trimestre calendario del periodo."
+        data_tests:
+          - not_null
 
   - name: fct_produccion
     description: "Fact table de produccion mensual. Grano: un pozo por periodo."
@@ -111,6 +191,30 @@ models:
             combination_of_columns:
               - id_pozo
               - periodo
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: produccion_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: pozo_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: empresa_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: fecha_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: prod_gas
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: prod_petroleo
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: prod_agua
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: dias_produccion
     columns:
       - name: produccion_key
         description: "Clave surrogate de la fila fact."
@@ -169,6 +273,10 @@ models:
         description: "Clave natural del pozo para auditoria del grano."
         data_tests:
           - not_null
+      - name: id_empresa
+        description: "Clave natural de la empresa para auditoria."
+        data_tests:
+          - not_null
       - name: periodo
         description: "Periodo mensual de produccion."
         data_tests:
@@ -177,15 +285,32 @@ models:
         description: "Produccion de gas del periodo."
         data_tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
       - name: prod_petroleo
         description: "Produccion de petroleo del periodo."
         data_tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
       - name: prod_agua
         description: "Produccion de agua del periodo."
         data_tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
       - name: dias_produccion
         description: "Dias de produccion del periodo."
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                max_value: 31
+      - name: _loaded_at
+        description: "Marca tecnica de carga original."
         data_tests:
           - not_null

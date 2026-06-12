@@ -29,5 +29,5 @@ models:
       +schema: gold
 
 data_tests:
-  +store_failures: false
+  +store_failures: true
   +schema: dbt_test_failures
