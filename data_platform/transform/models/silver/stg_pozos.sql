@@ -19,6 +19,10 @@ deduped as (
         nullif(trim(sigla), '')             as sigla,
         nullif(trim(formprod), '')          as formacion_productiva,
         upper(trim(idempresa))              as id_empresa,
+        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['empresa', 'operador'], 'idempresa') }}), '') as empresa,
+        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['area', 'areapermisoconcesion'], "'SIN_AREA'") }}), '') as area,
+        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['cuenca'], "'SIN_CUENCA'") }}), '') as cuenca,
+        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['tipo_recurso', 'tiporecurso', 'recurso'], 'formprod') }}), '') as tipo_recurso,
         _loaded_at,
         row_number() over (
             partition by nullif(trim(idpozo), '')::bigint
@@ -33,6 +37,10 @@ select
     sigla,
     formacion_productiva,
     id_empresa,
+    empresa,
+    area,
+    cuenca,
+    tipo_recurso,
     _loaded_at
 from deduped
 where _row_num = 1

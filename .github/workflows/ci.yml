@@ -212,8 +212,8 @@ jobs:
       - name: Seed bronze fixtures
         run: uv run --group data python -m data_platform.ci.seed_bronze
 
-      - name: Run silver models
-        run: uv run --group data dbt run --select silver --project-dir data_platform/transform --profiles-dir data_platform/transform
+      - name: Run silver and gold models
+        run: uv run --group data dbt run --select silver gold --project-dir data_platform/transform --profiles-dir data_platform/transform
 
-      - name: Test silver models
-        run: uv run --group data dbt test --select silver --project-dir data_platform/transform --profiles-dir data_platform/transform
+      - name: Test silver and gold models
+        run: uv run --group data dbt test --select silver gold --project-dir data_platform/transform --profiles-dir data_platform/transform
