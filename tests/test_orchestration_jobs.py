@@ -12,7 +12,7 @@ import pytest
 
 pytest.importorskip("dagster")
 
-from dagster import Backoff, RetryPolicy, build_schedule_context  # noqa: E402
+from dagster import Backoff, RunRequest, RetryPolicy, build_schedule_context  # noqa: E402
 
 import data_platform.orchestration as orchestration  # noqa: E402
 from data_platform.extraction.bronze_loader import BronzeLoad  # noqa: E402
@@ -176,6 +176,11 @@ def test_end_to_end_data_job_rematerializes_the_same_partition(
     assert reprocess_periods == ["2026-01-01", "2026-01-01"]
 
 
+def test_end_to_end_data_job_uses_bronze_monthly_partitions() -> None:
+    """Backfills should use the same monthly partitions as the bronze assets."""
+    assert jobs.end_to_end_data_job.partitions_def is bronze.bronze_monthly_partitions
+
+
 def test_definitions_register_end_to_end_data_job() -> None:
     """Dagster definitions should expose the operational end-to-end job."""
     assert orchestration.defs.get_job_def("end_to_end_data_job").name == (
@@ -206,3 +211,15 @@ def test_monthly_data_pipeline_schedule_requests_monthly_partition() -> None:
 
     assert len(run_requests) == 1
     assert run_requests[0].partition_key == "2026-05-01"
+
+
+def test_monthly_data_pipeline_schedule_function_returns_latest_partition() -> None:
+    """The schedule function should request the latest closed monthly partition."""
+    context = build_schedule_context(
+        scheduled_execution_time=datetime(2026, 6, 1, 3, 0),
+    )
+
+    run_request = monthly_data_pipeline_schedule(context)
+
+    assert isinstance(run_request, RunRequest)
+    assert run_request.partition_key == "2026-05-01"
