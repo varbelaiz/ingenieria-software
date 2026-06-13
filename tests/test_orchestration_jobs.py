@@ -73,6 +73,7 @@ def test_end_to_end_data_job_loads_bronze_before_dbt_build(
     """The end-to-end job should load both bronze tables before dbt build."""
     events: list[str] = []
     bronze_loads: list[BronzeLoad] = []
+    reprocess_periods: list[str | None] = []
 
     def fake_warehouse_connection() -> Iterator[FakeWarehouseConnection]:
         return FakeWarehouseConnection(events)
@@ -86,7 +87,11 @@ def test_end_to_end_data_job_loads_bronze_before_dbt_build(
         events.append(f"load:{bronze_load.table_name}")
         return len(bronze_load.rows)
 
-    def fake_run_dbt_build() -> subprocess.CompletedProcess[str]:
+    def fake_run_dbt_build(
+        *,
+        reprocess_period: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        reprocess_periods.append(reprocess_period)
         events.append("dbt")
         return subprocess.CompletedProcess(
             args=["dbt", "build"],
@@ -112,8 +117,63 @@ def test_end_to_end_data_job_loads_bronze_before_dbt_build(
         "2026-01-01",
         "2026-01-01",
     ]
+    assert reprocess_periods == ["2026-01-01"]
     assert events.index("load:produccion_raw") < events.index("dbt")
     assert events.index("load:pozos_raw") < events.index("dbt")
+
+
+def test_end_to_end_data_job_rematerializes_the_same_partition(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Re-running a backfill partition should target the same replaceable period."""
+    loaded_rows_by_partition: dict[tuple[str, str], int] = {}
+    reprocess_periods: list[str | None] = []
+
+    def fake_warehouse_connection() -> Iterator[FakeWarehouseConnection]:
+        return FakeWarehouseConnection([])
+
+    def fake_load_bronze_table(
+        conn: FakeWarehouseConnection,
+        bronze_load: BronzeLoad,
+    ) -> int:
+        assert isinstance(conn, FakeWarehouseConnection)
+        loaded_rows_by_partition[
+            (bronze_load.table_name, bronze_load.load_period)
+        ] = len(bronze_load.rows)
+        return len(bronze_load.rows)
+
+    def fake_run_dbt_build(
+        *,
+        reprocess_period: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        reprocess_periods.append(reprocess_period)
+        return subprocess.CompletedProcess(
+            args=["dbt", "build"],
+            returncode=0,
+            stdout="dbt ok",
+            stderr="",
+        )
+
+    monkeypatch.setattr(jobs, "fetch_produccion_rows", lambda: [{"idpozo": "1"}])
+    monkeypatch.setattr(jobs, "fetch_pozos_rows", lambda: [{"idpozo": "1"}])
+    monkeypatch.setattr(jobs, "warehouse_connection", fake_warehouse_connection)
+    monkeypatch.setattr(jobs, "load_bronze_table", fake_load_bronze_table)
+    monkeypatch.setattr(jobs, "run_dbt_build", fake_run_dbt_build)
+
+    first_result = jobs.end_to_end_data_job.execute_in_process(
+        partition_key="2026-01-01",
+    )
+    second_result = jobs.end_to_end_data_job.execute_in_process(
+        partition_key="2026-01-01",
+    )
+
+    assert first_result.success
+    assert second_result.success
+    assert loaded_rows_by_partition == {
+        ("produccion_raw", "2026-01-01"): 1,
+        ("pozos_raw", "2026-01-01"): 1,
+    }
+    assert reprocess_periods == ["2026-01-01", "2026-01-01"]
 
 
 def test_definitions_register_end_to_end_data_job() -> None:

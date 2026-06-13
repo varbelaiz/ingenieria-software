@@ -204,7 +204,7 @@ def run_end_to_end_dbt_build(
         produccion_row_count,
         pozos_row_count,
     )
-    completed = run_dbt_build()
+    completed = run_dbt_build(reprocess_period=_partition_key(context))
     _log_completed_dbt_build(context, completed)
 
 
