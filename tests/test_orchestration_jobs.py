@@ -1,24 +1,25 @@
 """Unit tests for Dagster orchestration jobs."""
 
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from __future__ import annotations
 
-from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 import subprocess
-from typing import Any
 
 import pytest
 
 pytest.importorskip("dagster")
 
-from dagster import Backoff, RunRequest, RetryPolicy, build_schedule_context  # noqa: E402
+from dagster import Backoff, RunRequest, RetryPolicy, build_schedule_context
 
-import data_platform.orchestration as orchestration  # noqa: E402
-from data_platform.extraction.bronze_loader import BronzeLoad  # noqa: E402
-from data_platform.orchestration.assets import bronze  # noqa: E402
-from data_platform.orchestration import jobs  # noqa: E402
-from data_platform.orchestration.schedules import (  # noqa: E402
+from data_platform import orchestration
+from data_platform.extraction.bronze_loader import BronzeLoad
+from data_platform.orchestration.assets import bronze
+from data_platform.orchestration import jobs
+from data_platform.orchestration.schedules import (
     monthly_data_pipeline_schedule,
 )
 
@@ -75,7 +76,7 @@ def test_end_to_end_data_job_loads_bronze_before_dbt_build(
     bronze_loads: list[BronzeLoad] = []
     reprocess_periods: list[str | None] = []
 
-    def fake_warehouse_connection() -> Iterator[FakeWarehouseConnection]:
+    def fake_warehouse_connection() -> FakeWarehouseConnection:
         return FakeWarehouseConnection(events)
 
     def fake_load_bronze_table(
@@ -129,7 +130,7 @@ def test_end_to_end_data_job_rematerializes_the_same_partition(
     loaded_rows_by_partition: dict[tuple[str, str], int] = {}
     reprocess_periods: list[str | None] = []
 
-    def fake_warehouse_connection() -> Iterator[FakeWarehouseConnection]:
+    def fake_warehouse_connection() -> FakeWarehouseConnection:
         return FakeWarehouseConnection([])
 
     def fake_load_bronze_table(
@@ -137,9 +138,9 @@ def test_end_to_end_data_job_rematerializes_the_same_partition(
         bronze_load: BronzeLoad,
     ) -> int:
         assert isinstance(conn, FakeWarehouseConnection)
-        loaded_rows_by_partition[
-            (bronze_load.table_name, bronze_load.load_period)
-        ] = len(bronze_load.rows)
+        loaded_rows_by_partition[(bronze_load.table_name, bronze_load.load_period)] = (
+            len(bronze_load.rows)
+        )
         return len(bronze_load.rows)
 
     def fake_run_dbt_build(

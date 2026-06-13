@@ -46,7 +46,7 @@ ORCHESTRATION_RETRY_POLICY = RetryPolicy(
 
 def _partition_key(context: OpExecutionContext) -> str:
     """Read the active Dagster partition key for bronze load metadata."""
-    return context.partition_key
+    return str(context.partition_key)
 
 
 def _safe_context_value(
@@ -211,6 +211,8 @@ def run_end_to_end_dbt_build(
 @job(partitions_def=bronze_monthly_partitions, hooks={data_quality_failure_hook})
 def end_to_end_data_job() -> None:
     """Load bronze sources and then run dbt build for silver/gold/tests."""
+    # Dagster injects op context and upstream outputs at runtime.
+    # pylint: disable=no-value-for-parameter
     produccion_row_count = load_bronze_produccion_raw()
     run_end_to_end_dbt_build(
         produccion_row_count,
