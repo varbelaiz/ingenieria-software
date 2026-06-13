@@ -4,7 +4,14 @@ import json
 import os
 from urllib import error, request
 
-from dagster import HookContext, OpExecutionContext, failure_hook, job, op
+from dagster import (
+    HookContext,
+    OpExecutionContext,
+    failure_hook,
+    job,
+    op,
+)
+from dagster._core.errors import DagsterInvalidPropertyError
 
 from data_platform.orchestration.dbt import run_dbt_build
 
@@ -20,7 +27,7 @@ def _safe_context_value(
     """Read context attributes defensively for Dagster runtime and tests."""
     try:
         value = getattr(context, attribute)
-    except Exception:  # pragma: no cover - defensive path for Dagster test contexts.
+    except (AttributeError, DagsterInvalidPropertyError):
         return default
     return default if value is None else str(value)
 
@@ -35,7 +42,7 @@ def emit_data_quality_alert(
     op_name = "unknown"
     try:
         op = context.op
-    except Exception:  # pragma: no cover - defensive path for Dagster test contexts.
+    except (AttributeError, DagsterInvalidPropertyError):
         op = None
     if op is not None:
         op_name = op.name
@@ -72,9 +79,11 @@ def _send_data_quality_webhook(
 
 
 @failure_hook
-def data_quality_failure_hook(context) -> None:
+def data_quality_failure_hook(context: HookContext) -> None:
     """Emit a structured alert when the dbt quality gate fails."""
-    error_message = str(context.op_exception) if context.op_exception else "Unknown failure"
+    error_message = (
+        str(context.op_exception) if context.op_exception else "Unknown failure"
+    )
     emit_data_quality_alert(
         context,
         error_message=error_message,
@@ -83,7 +92,7 @@ def data_quality_failure_hook(context) -> None:
 
 
 @op
-def run_dbt_quality_build(context) -> None:
+def run_dbt_quality_build(context: OpExecutionContext) -> None:
     """Execute dbt build so failing tests block downstream promotion."""
     completed = run_dbt_build()
     if completed.stdout:
@@ -95,4 +104,6 @@ def run_dbt_quality_build(context) -> None:
 @job(hooks={data_quality_failure_hook})
 def data_quality_job() -> None:
     """Minimal Dagster job that enforces silver/gold data quality."""
+    # Dagster injects the op context at runtime.
+    # pylint: disable=no-value-for-parameter
     run_dbt_quality_build()

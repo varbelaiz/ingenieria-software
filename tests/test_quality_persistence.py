@@ -1,5 +1,7 @@
 """Integration and unit tests for persisted dbt quality checks."""
 
+# pylint: disable=wrong-import-position
+
 from __future__ import annotations
 
 import os
@@ -9,22 +11,27 @@ from typing import Any
 
 import pytest
 
-from data_platform.extraction.bronze_loader import BronzeLoad, load_bronze_table
-from data_platform.orchestration.dbt import (
+psycopg2 = pytest.importorskip("psycopg2")
+pytest.importorskip("dagster")
+
+from dagster import build_hook_context  # noqa: E402
+
+from data_platform.ci.seed_bronze import (  # noqa: E402
+    LOAD_PERIOD,
+    POZOS_FIXTURE,
+    PRODUCCION_FIXTURE,
+)
+from data_platform.extraction.bronze_loader import (  # noqa: E402
+    BronzeLoad,
+    load_bronze_table,
+)
+from data_platform.orchestration.dbt import (  # noqa: E402
     DBT_PROFILES_DIR,
     DBT_PROJECT_DIR,
     DbtBuildFailedError,
     build_dbt_build_command,
     run_dbt_build,
 )
-
-
-psycopg2 = pytest.importorskip("psycopg2")
-dagster = pytest.importorskip("dagster")
-
-from dagster import build_hook_context  # noqa: E402
-
-from data_platform.ci.seed_bronze import LOAD_PERIOD, POZOS_FIXTURE, PRODUCCION_FIXTURE  # noqa: E402
 from data_platform.orchestration.jobs import emit_data_quality_alert  # noqa: E402
 
 
