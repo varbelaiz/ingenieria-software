@@ -12,10 +12,11 @@ import pytest
 
 pytest.importorskip("dagster")
 
-from dagster import build_schedule_context  # noqa: E402
+from dagster import Backoff, RetryPolicy, build_schedule_context  # noqa: E402
 
 import data_platform.orchestration as orchestration  # noqa: E402
 from data_platform.extraction.bronze_loader import BronzeLoad  # noqa: E402
+from data_platform.orchestration.assets import bronze  # noqa: E402
 from data_platform.orchestration import jobs  # noqa: E402
 from data_platform.orchestration.schedules import (  # noqa: E402
     monthly_data_pipeline_schedule,
@@ -34,6 +35,36 @@ class FakeWarehouseConnection:
 
     def __exit__(self, *args: object) -> None:
         self.events.append("disconnect")
+
+
+def assert_exponential_backoff_retry_policy(
+    retry_policy: RetryPolicy | None,
+) -> None:
+    """Assert the Dagster retry policy matches the orchestration standard."""
+    assert retry_policy is not None
+    assert retry_policy.max_retries == 3
+    assert retry_policy.delay == 30
+    assert retry_policy.backoff == Backoff.EXPONENTIAL
+
+
+def test_bronze_assets_define_exponential_backoff_retry_policy() -> None:
+    """Bronze assets should retry transient extraction/load failures."""
+    assert_exponential_backoff_retry_policy(
+        bronze.bronze_produccion_raw.op.retry_policy,
+    )
+    assert_exponential_backoff_retry_policy(
+        bronze.bronze_pozos_raw.op.retry_policy,
+    )
+
+
+def test_orchestration_ops_define_exponential_backoff_retry_policy() -> None:
+    """Operational steps should retry transient extraction/dbt failures."""
+    assert_exponential_backoff_retry_policy(jobs.run_dbt_quality_build.retry_policy)
+    assert_exponential_backoff_retry_policy(
+        jobs.load_bronze_produccion_raw.retry_policy,
+    )
+    assert_exponential_backoff_retry_policy(jobs.load_bronze_pozos_raw.retry_policy)
+    assert_exponential_backoff_retry_policy(jobs.run_end_to_end_dbt_build.retry_policy)
 
 
 def test_end_to_end_data_job_loads_bronze_before_dbt_build(

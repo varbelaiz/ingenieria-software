@@ -4,7 +4,13 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 import os
 
-from dagster import AssetExecutionContext, MonthlyPartitionsDefinition, asset
+from dagster import (
+    AssetExecutionContext,
+    Backoff,
+    MonthlyPartitionsDefinition,
+    RetryPolicy,
+    asset,
+)
 import psycopg2
 from psycopg2.extensions import connection as PgConnection
 
@@ -24,9 +30,18 @@ from data_platform.extraction.produccion import (
 
 
 bronze_monthly_partitions = MonthlyPartitionsDefinition(start_date="2026-01-01")
+BRONZE_RETRY_POLICY = RetryPolicy(
+    max_retries=3,
+    delay=30,
+    backoff=Backoff.EXPONENTIAL,
+)
 
 
-@asset(partitions_def=bronze_monthly_partitions, group_name="bronze")
+@asset(
+    partitions_def=bronze_monthly_partitions,
+    group_name="bronze",
+    retry_policy=BRONZE_RETRY_POLICY,
+)
 def bronze_produccion_raw(context: AssetExecutionContext) -> int:
     """Load raw non-conventional production rows into bronze.produccion_raw."""
     rows = fetch_produccion_rows()
@@ -45,7 +60,11 @@ def bronze_produccion_raw(context: AssetExecutionContext) -> int:
     return row_count
 
 
-@asset(partitions_def=bronze_monthly_partitions, group_name="bronze")
+@asset(
+    partitions_def=bronze_monthly_partitions,
+    group_name="bronze",
+    retry_policy=BRONZE_RETRY_POLICY,
+)
 def bronze_pozos_raw(context: AssetExecutionContext) -> int:
     """Load raw operator-submitted well rows into bronze.pozos_raw."""
     rows = fetch_pozos_rows()
