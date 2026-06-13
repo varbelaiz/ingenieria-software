@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+from datetime import datetime
 import subprocess
 from typing import Any
 
@@ -11,9 +12,14 @@ import pytest
 
 pytest.importorskip("dagster")
 
+from dagster import build_schedule_context  # noqa: E402
+
 import data_platform.orchestration as orchestration  # noqa: E402
 from data_platform.extraction.bronze_loader import BronzeLoad  # noqa: E402
 from data_platform.orchestration import jobs  # noqa: E402
+from data_platform.orchestration.schedules import (  # noqa: E402
+    monthly_data_pipeline_schedule,
+)
 
 
 @dataclass
@@ -84,3 +90,28 @@ def test_definitions_register_end_to_end_data_job() -> None:
     assert orchestration.defs.get_job_def("end_to_end_data_job").name == (
         "end_to_end_data_job"
     )
+
+
+def test_definitions_register_monthly_data_pipeline_schedule() -> None:
+    """Dagster definitions should expose the monthly pipeline schedule."""
+    schedule = orchestration.defs.get_schedule_def("monthly_data_pipeline_schedule")
+
+    assert schedule.name == "monthly_data_pipeline_schedule"
+    assert schedule.job_name == "end_to_end_data_job"
+    assert schedule.cron_schedule == "0 3 1 * *"
+    assert schedule.execution_timezone == "America/Argentina/Buenos_Aires"
+
+
+def test_monthly_data_pipeline_schedule_requests_monthly_partition() -> None:
+    """The monthly schedule should launch the latest closed monthly partition."""
+    repository_def = orchestration.defs.get_repository_def()
+    context = build_schedule_context(
+        scheduled_execution_time=datetime(2026, 6, 1, 3, 0),
+        repository_def=repository_def,
+    )
+
+    schedule = repository_def.get_schedule_def("monthly_data_pipeline_schedule")
+    run_requests = schedule.evaluate_tick(context).run_requests
+
+    assert len(run_requests) == 1
+    assert run_requests[0].partition_key == "2026-05-01"
