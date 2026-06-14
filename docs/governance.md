@@ -161,9 +161,11 @@ uvx --from "acryl-datahub[postgres,dbt]>=1.4,<1.5" datahub ingest \
 
 Los recipes productivos siguen apuntando a `datahub-rest` en `http://localhost:8080`.
 Los recipes de CI escriben metadata en archivos temporales bajo `/tmp`, porque aun con
-`--dry-run` la CLI inicializa el sink configurado. Si se necesita validar la publicacion
-completa de metadata, levantar DataHub localmente y repetir los comandos productivos sin
-`--dry-run`.
+`--dry-run` la CLI inicializa el sink configurado. El recipe CI de dbt usa
+`write_semantics: OVERRIDE`, ya que la semantica `PATCH` por defecto requiere un graph
+provisto por `datahub-rest` o por una configuracion `datahub_api`. Si se necesita validar
+la publicacion completa de metadata, levantar DataHub localmente y repetir los comandos
+productivos sin `--dry-run`.
 
 Dagster no usa una receta pull equivalente. DataHub 1.4.0 documenta la integracion con
 Dagster mediante `acryl_datahub_dagster_plugin` y un sensor `datahub_sensor` que emite

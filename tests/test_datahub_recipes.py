@@ -79,6 +79,7 @@ def test_dbt_recipe_defines_datahub_source_and_rest_sink() -> None:
         "data_platform/transform/target/run_results.json",
     ]
     assert recipe["source"]["config"]["target_platform"] == "postgres"
+    assert "write_semantics" not in recipe["source"]["config"]
     assert recipe["sink"]["type"] == "datahub-rest"
     assert recipe["sink"]["config"]["server"] == "http://localhost:8080"
 
@@ -103,6 +104,7 @@ def test_ci_dbt_recipe_uses_file_sink() -> None:
     assert recipe["source"]["config"]["manifest_path"] == (
         "data_platform/transform/target/manifest.json"
     )
+    assert recipe["source"]["config"]["write_semantics"] == "OVERRIDE"
     assert recipe["sink"]["type"] == "file"
     assert recipe["sink"]["config"]["filename"] == "/tmp/datahub-dbt-metadata.json"
 

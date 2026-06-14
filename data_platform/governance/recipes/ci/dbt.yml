@@ -10,6 +10,7 @@ source:
       - data_platform/transform/target/run_results.json
     target_platform: postgres
     env: DEV
+    write_semantics: OVERRIDE
     entities_enabled:
       catalog_stats: "YES"
       test_results: "YES"
