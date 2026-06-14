@@ -1,0 +1,19 @@
+# DataHub ingestion recipe for local dbt metadata.
+# Run from the repository root after `dbt build` and `dbt docs generate`.
+source:
+  type: dbt
+  config:
+    manifest_path: data_platform/transform/target/manifest.json
+    catalog_path: data_platform/transform/target/catalog.json
+    run_results_paths:
+      - data_platform/transform/target/run_results.json
+    target_platform: postgres
+    env: DEV
+    entities_enabled:
+      catalog_stats: "YES"
+      test_results: "YES"
+
+sink:
+  type: datahub-rest
+  config:
+    server: http://localhost:8080
