@@ -24,9 +24,11 @@ def load_recipe(name: str) -> dict[str, Any]:
 
 def test_all_governance_recipes_are_valid_yaml_mappings() -> None:
     """Every governance recipe file should parse as a YAML mapping."""
-    recipe_paths = sorted(RECIPES_DIR.glob("*.yml"))
+    recipe_paths = sorted(RECIPES_DIR.rglob("*.yml"))
 
-    assert {path.name for path in recipe_paths} == {
+    assert {path.relative_to(RECIPES_DIR).as_posix() for path in recipe_paths} == {
+        "ci/dbt.yml",
+        "ci/postgres.yml",
         "dagster.yml",
         "dbt.yml",
         "postgres.yml",
@@ -79,6 +81,30 @@ def test_dbt_recipe_defines_datahub_source_and_rest_sink() -> None:
     assert recipe["source"]["config"]["target_platform"] == "postgres"
     assert recipe["sink"]["type"] == "datahub-rest"
     assert recipe["sink"]["config"]["server"] == "http://localhost:8080"
+
+
+def test_ci_postgres_recipe_uses_file_sink() -> None:
+    """CI should validate Postgres ingestion without connecting to DataHub GMS."""
+    recipe = load_recipe("ci/postgres.yml")
+
+    assert recipe["source"]["type"] == "postgres"
+    assert recipe["source"]["config"]["host_port"] == "localhost:5433"
+    assert recipe["sink"]["type"] == "file"
+    assert recipe["sink"]["config"]["filename"] == (
+        "/tmp/datahub-postgres-metadata.json"
+    )
+
+
+def test_ci_dbt_recipe_uses_file_sink() -> None:
+    """CI should validate dbt ingestion without connecting to DataHub GMS."""
+    recipe = load_recipe("ci/dbt.yml")
+
+    assert recipe["source"]["type"] == "dbt"
+    assert recipe["source"]["config"]["manifest_path"] == (
+        "data_platform/transform/target/manifest.json"
+    )
+    assert recipe["sink"]["type"] == "file"
+    assert recipe["sink"]["config"]["filename"] == "/tmp/datahub-dbt-metadata.json"
 
 
 def test_dagster_recipe_documents_expected_sensor_configuration() -> None:

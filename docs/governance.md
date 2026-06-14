@@ -149,18 +149,21 @@ artefactos dbt y las dos ingestas sin `--dry-run`.
 
 CI no instala DataHub como dependencia del proyecto ni levanta el stack de DataHub. El
 job `datahub-recipe-validate` genera `sources.json`, `manifest.json`, `catalog.json` y
-`run_results.json`; despues usa la CLI de forma efimera con `uvx`:
+`run_results.json`; despues usa la CLI de forma efimera con `uvx` y recipes equivalentes
+con sink `file`, para validar la ingesta sin conectarse a DataHub GMS:
 
 ```bash
 uvx --from "acryl-datahub[postgres,dbt]>=1.4,<1.5" datahub ingest \
-  -c data_platform/governance/recipes/postgres.yml --dry-run --no-default-report
+  -c data_platform/governance/recipes/ci/postgres.yml --dry-run --no-default-report
 uvx --from "acryl-datahub[postgres,dbt]>=1.4,<1.5" datahub ingest \
-  -c data_platform/governance/recipes/dbt.yml --dry-run --no-default-report
+  -c data_platform/governance/recipes/ci/dbt.yml --dry-run --no-default-report
 ```
 
-El flag `--no-default-report` evita reportar la corrida a DataHub GMS durante la
-validacion de CI. Si se necesita validar la publicacion completa de metadata, levantar
-DataHub localmente y repetir los comandos sin `--dry-run`.
+Los recipes productivos siguen apuntando a `datahub-rest` en `http://localhost:8080`.
+Los recipes de CI escriben metadata en archivos temporales bajo `/tmp`, porque aun con
+`--dry-run` la CLI inicializa el sink configurado. Si se necesita validar la publicacion
+completa de metadata, levantar DataHub localmente y repetir los comandos productivos sin
+`--dry-run`.
 
 Dagster no usa una receta pull equivalente. DataHub 1.4.0 documenta la integracion con
 Dagster mediante `acryl_datahub_dagster_plugin` y un sensor `datahub_sensor` que emite
