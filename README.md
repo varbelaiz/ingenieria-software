@@ -14,6 +14,7 @@ La documentación técnica completa está en [`docs/`](docs/index.md):
 - [Infraestructura](docs/infrastructure.md) — recursos AWS y ambientes staging/prod
 - [Monitoreo](docs/monitoring.md) — Prometheus, Grafana y métricas
 - [Load Testing](docs/load-testing.md) — tráfico sintético con Locust
+- [Gobierno de datos](docs/governance.md) — quickstart local de DataHub
 - [Ops](docs/ops.md) — deploy, secretos y monitoreo operativo
 - [Runbook de Data Engineer](docs/runbooks/data-engineer.md) — backfill histórico y verificación de reprocesos
 
