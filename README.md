@@ -44,6 +44,27 @@ Servicios: API `:8000` · Prometheus `:9090` · Grafana `:3000`
 
 Credenciales de Grafana: usuario `admin`, contraseña = `GF_SECURITY_ADMIN_PASSWORD` en `.env`.
 
+## DataHub local
+
+DataHub corre en un Compose separado del stack principal porque levanta servicios pesados
+como Kafka, OpenSearch y MySQL. Para crear las variables locales:
+
+```bash
+cp .env.datahub.example .env.datahub
+openssl rand -base64 32  # usar para DATAHUB_TOKEN_SERVICE_SIGNING_KEY
+openssl rand -base64 32  # usar para DATAHUB_TOKEN_SERVICE_SALT
+```
+
+Levantar la UI y los servicios base:
+
+```bash
+docker compose --env-file .env.datahub -f docker-compose.datahub.yml up -d
+```
+
+Acceso local: `http://localhost:9002` con usuario `datahub` y password `datahub`.
+Para publicar metadata y revisar lineage/freshness, ver
+[`docs/governance.md`](docs/governance.md).
+
 ## Testing y calidad
 
 ```bash

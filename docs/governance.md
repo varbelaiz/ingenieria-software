@@ -100,11 +100,70 @@ warehouse local; la receta de dbt agrega lineage, descripciones y resultados de 
 DataHub recomienda correr ambas para que los nodos dbt se vinculen con las tablas reales
 de Postgres.
 
+## Ver lineage y freshness
+
+Para revisar lineage y freshness en la UI, levantar primero los dos stacks locales:
+
+```bash
+docker compose -f docker-compose.data.yml up --build
+docker compose --env-file .env.datahub -f docker-compose.datahub.yml up -d
+```
+
+Generar los artefactos de dbt que DataHub usa para lineage, catalogo, estadisticas y
+resultados de tests:
+
+```bash
+cd data_platform/transform
+dbt build --profiles-dir .
+cp target/run_results.json target/run_results_build.json
+dbt docs generate --profiles-dir .
+cp target/run_results_build.json target/run_results.json
+cd ../..
+```
+
+Publicar metadata desde la raiz del repo. Correr primero Postgres para catalogar las
+tablas fisicas y despues dbt para agregar modelos, descripciones, tests y lineage:
+
+```bash
+datahub ingest -c data_platform/governance/recipes/postgres.yml
+datahub ingest -c data_platform/governance/recipes/dbt.yml
+```
+
+Abrir `http://localhost:9002`, iniciar sesion con `datahub` / `datahub` y buscar datasets
+de los esquemas `bronze`, `silver` y `gold`. En una tabla gold como
+`gold.fct_produccion`, abrir la vista de lineage y confirmar el recorrido
+`bronze.produccion_raw` -> `silver.stg_produccion` -> `gold.fct_produccion`, junto con
+las dimensiones gold relacionadas.
+
+Para freshness, revisar la ultima actualizacion y metadata operativa del dataset en
+DataHub. Las fuentes bronze declaran `loaded_at_field: _loaded_at` y umbrales de
+freshness en `data_platform/transform/models/sources.yml`; los resultados de `dbt build`
+se preservan en `target/run_results.json` para que DataHub muestre resultados de tests y
+estado reciente del build. Si la UI no muestra datos nuevos, repetir la generacion de
+artefactos dbt y las dos ingestas sin `--dry-run`.
+
+## Validacion en CI
+
+CI no instala DataHub como dependencia del proyecto ni levanta el stack de DataHub. El
+job `datahub-recipe-validate` usa la CLI de forma efimera con `uvx`:
+
+```bash
+uvx --from "acryl-datahub[postgres,dbt]>=1.4,<1.5" datahub ingest \
+  -c data_platform/governance/recipes/postgres.yml --dry-run --no-default-report
+uvx --from "acryl-datahub[postgres,dbt]>=1.4,<1.5" datahub ingest \
+  -c data_platform/governance/recipes/dbt.yml --dry-run --no-default-report
+```
+
+El flag `--no-default-report` evita reportar la corrida a DataHub GMS durante la
+validacion de CI. Si se necesita validar la publicacion completa de metadata, levantar
+DataHub localmente y repetir los comandos sin `--dry-run`.
+
 Dagster no usa una receta pull equivalente. DataHub 1.4.0 documenta la integracion con
 Dagster mediante `acryl_datahub_dagster_plugin` y un sensor `datahub_sensor` que emite
 metadata despues de cada run. El archivo `data_platform/governance/recipes/dagster.yml`
-deja registrada la configuracion local esperada; la validacion completa queda para el
-commit que agregue el sensor a `data_platform/orchestration/`.
+deja registrada la configuracion local esperada y CI valida su estructura como YAML. La
+validacion completa queda para el commit que agregue el sensor a
+`data_platform/orchestration/`.
 
 ## Detener o reiniciar
 

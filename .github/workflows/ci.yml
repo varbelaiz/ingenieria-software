@@ -161,6 +161,75 @@ jobs:
       - name: Validate Dagster Definitions load
         run: uv run --group data dagster definitions validate -m data_platform.orchestration
 
+  datahub-recipe-validate:
+    runs-on: ubuntu-latest
+
+    services:
+      warehouse:
+        image: postgres:16
+        env:
+          POSTGRES_USER: warehouse
+          POSTGRES_PASSWORD: warehouse
+          POSTGRES_DB: warehouse
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U warehouse"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      WAREHOUSE_HOST: localhost
+      WAREHOUSE_PORT: "5433"
+      WAREHOUSE_USER: warehouse
+      WAREHOUSE_PASSWORD: warehouse
+      WAREHOUSE_DB: warehouse
+      DBT_WAREHOUSE_HOST: localhost
+      DBT_WAREHOUSE_PORT: "5433"
+      DBT_WAREHOUSE_USER: warehouse
+      DBT_WAREHOUSE_PASSWORD: warehouse
+      DBT_WAREHOUSE_DB: warehouse
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install data dependencies
+        run: uv sync --group data --no-dev
+
+      - name: Install dbt packages
+        run: uv run --group data dbt deps --project-dir data_platform/transform --profiles-dir data_platform/transform
+
+      - name: Seed bronze fixtures
+        run: uv run --group data python -m data_platform.ci.seed_bronze
+
+      - name: Generate dbt build metadata
+        run: uv run --group data dbt build --select silver gold --project-dir data_platform/transform --profiles-dir data_platform/transform
+
+      - name: Preserve dbt build run results
+        run: cp data_platform/transform/target/run_results.json data_platform/transform/target/run_results_build.json
+
+      - name: Generate dbt docs metadata
+        run: uv run --group data dbt docs generate --project-dir data_platform/transform --profiles-dir data_platform/transform
+
+      - name: Restore dbt build run results
+        run: cp data_platform/transform/target/run_results_build.json data_platform/transform/target/run_results.json
+
+      - name: Validate Postgres DataHub recipe
+        run: uvx --from "acryl-datahub[postgres,dbt]>=1.4,<1.5" datahub ingest -c data_platform/governance/recipes/postgres.yml --dry-run --no-default-report
+
+      - name: Validate dbt DataHub recipe
+        run: uvx --from "acryl-datahub[postgres,dbt]>=1.4,<1.5" datahub ingest -c data_platform/governance/recipes/dbt.yml --dry-run --no-default-report
+
   dbt-test:
     runs-on: ubuntu-latest
 
