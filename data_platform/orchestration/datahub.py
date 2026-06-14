@@ -16,8 +16,10 @@ DEFAULT_DAGSTER_URL = "http://localhost:3001"
 def build_datahub_sensor() -> SensorDefinition | None:
     """Build the DataHub sensor when the optional plugin is installed."""
     try:
-        from datahub.ingestion.graph.client import DatahubClientConfig  # pylint: disable=import-outside-toplevel
-        from datahub_dagster_plugin.sensors.datahub_sensors import (  # pylint: disable=import-outside-toplevel
+        # DataHub is optional, so these imports must stay lazy.
+        # pylint: disable=import-outside-toplevel
+        from datahub.ingestion.graph.client import DatahubClientConfig
+        from datahub_dagster_plugin.sensors.datahub_sensors import (
             DatahubDagsterSourceConfig,
             make_datahub_sensor,
         )
