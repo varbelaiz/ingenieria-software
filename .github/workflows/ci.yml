@@ -212,6 +212,9 @@ jobs:
       - name: Seed bronze fixtures
         run: uv run --group data python -m data_platform.ci.seed_bronze
 
+      - name: Generate source freshness metadata
+        run: uv run --group data dbt source freshness --project-dir data_platform/transform --profiles-dir data_platform/transform
+
       - name: Generate dbt build metadata
         run: uv run --group data dbt build --select silver gold --project-dir data_platform/transform --profiles-dir data_platform/transform
 

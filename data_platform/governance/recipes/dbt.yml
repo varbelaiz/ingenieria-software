@@ -5,6 +5,7 @@ source:
   config:
     manifest_path: data_platform/transform/target/manifest.json
     catalog_path: data_platform/transform/target/catalog.json
+    sources_path: data_platform/transform/target/sources.json
     run_results_paths:
       - data_platform/transform/target/run_results.json
     target_platform: postgres

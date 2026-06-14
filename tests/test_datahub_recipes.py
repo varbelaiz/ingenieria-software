@@ -70,6 +70,9 @@ def test_dbt_recipe_defines_datahub_source_and_rest_sink() -> None:
     assert recipe["source"]["config"]["catalog_path"] == (
         "data_platform/transform/target/catalog.json"
     )
+    assert recipe["source"]["config"]["sources_path"] == (
+        "data_platform/transform/target/sources.json"
+    )
     assert recipe["source"]["config"]["run_results_paths"] == [
         "data_platform/transform/target/run_results.json",
     ]

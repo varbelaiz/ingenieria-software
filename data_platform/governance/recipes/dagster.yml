@@ -2,8 +2,8 @@
 # `acryl_datahub_dagster_plugin` and a Dagster sensor, not through a pull-style
 # ingestion source like dbt or Postgres.
 #
-# This file records the local sensor configuration expected for the follow-up
-# implementation commit. Do not run it with `datahub ingest -c`.
+# This file records the local sensor configuration exposed by
+# `data_platform.orchestration.datahub`. Do not run it with `datahub ingest -c`.
 dagster_sensor:
   package: acryl_datahub_dagster_plugin
   sensor_name: datahub_sensor
