@@ -14,6 +14,8 @@ from psycopg2 import sql
 from psycopg2.extensions import connection as PgConnection
 from psycopg2.extras import execute_values
 
+from data_platform.extraction.client import ExtractionError
+
 
 BRONZE_SCHEMA = "bronze"
 TECHNICAL_COLUMNS = (
@@ -145,4 +147,4 @@ def _row_hash(row: Mapping[str, str]) -> str:
 
 def _validate_identifier(identifier: str) -> None:
     if not _IDENTIFIER_PATTERN.match(identifier):
-        raise ValueError(f"Invalid PostgreSQL identifier: {identifier}")
+        raise ExtractionError(f"Invalid PostgreSQL identifier: {identifier!r}")
