@@ -1,4 +1,4 @@
-"""Dagster definitions for the data platform."""
+"""Dagster orchestration entrypoint for the data platform."""
 
 from dagster import Definitions
 
