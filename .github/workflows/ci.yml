@@ -397,6 +397,9 @@ jobs:
       - name: Install dbt packages
         run: uv run --group data dbt deps --project-dir data_platform/transform --profiles-dir data_platform/transform
 
+      - name: Generate dbt manifest for dagster-dbt
+        run: uv run --group data dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform
+
       - name: Seed bronze fixtures
         run: uv run --group data python -m data_platform.ci.seed_bronze
 
