@@ -1435,9 +1435,9 @@ data_platform/transform/models/gold/semantic/   # (bonus) vistas/métricas dbt
 
 ### Criterios de done
 
-- [ ] `docs/runbooks/data-engineer.md` completo con las 8 secciones
-- [ ] `docs/runbooks/bi-user.md` completo con las 8 secciones
-- [ ] README tiene las tres secciones requeridas (actualizar workflows, acceder BI/gobierno,
+- [x] `docs/runbooks/data-engineer.md` completo con las 8 secciones
+- [x] `docs/runbooks/bi-user.md` completo con las 8 secciones
+- [x] README tiene las tres secciones requeridas (actualizar workflows, acceder BI/gobierno,
       arquitectura de datos)
 - [ ] (Bonus) semantic layer: al menos 2 métricas de negocio definidas en dbt
 - [ ] PR abierto y mergeado
@@ -1451,14 +1451,14 @@ data_platform/transform/models/gold/semantic/   # (bonus) vistas/métricas dbt
 
 | Plan | PR# | Branch | Anida sobre | Estado |
 |------|-----|--------|-------------|--------|
-| 1 | #32 | `feature/data-platform-scaffolding` (+bronze) | develop | 🟡 en revisión |
-| 3 | #28 | `feature/silver-transformations` | PR1 | 🟡 en revisión (✅ approved) |
-| 4 | #30 | `feature/gold-star-schema` | PR3 | 🟡 en revisión |
-| 5 | #31 | `feature/data-quality` | PR4 | 🟡 en revisión |
-| 6 | — | `feature/orchestration-hardening` | PR5 | ⬜ pendiente |
-| 7 | — | `feature/governance-datahub` | develop (post-PR4) | ⬜ pendiente |
-| 8 | — | `feature/bi-metabase` | develop (post-PR4) | ⬜ pendiente |
-| 9 | — | `feature/docs-runbooks` | develop (post-PR6/7/8) | ⬜ pendiente |
+| 1 | #32 | `feature/data-platform-scaffolding` (+bronze) | develop | ✅ mergeado |
+| 3 | #28 | `feature/silver-transformations` | PR1 | ✅ mergeado |
+| 4 | #30 | `feature/gold-star-schema` | PR3 | ✅ mergeado |
+| 5 | #31 | `feature/data-quality` | PR4 | ✅ mergeado |
+| 6 | #34 | `feature/orchestration-hardening` | PR5 | ✅ mergeado |
+| 7 | #35 | `feature/governance-datahub` | develop (post-PR4) | ✅ mergeado |
+| 8 | #36 | `feature/bi-metabase` | develop (post-PR4) | ✅ mergeado |
+| 9 | — | `feature/docs-runbooks` | develop (post-PR6/7/8) | 🟡 en revisión |
 
 (PR2/bronze: integrado en PR1, ya revisado vía su PR #27.)
 
