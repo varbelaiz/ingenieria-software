@@ -13,6 +13,5 @@ dagster_sensor:
     url: http://localhost:3001
   capture:
     asset_materialization: true
-    pipeline_runs: true
-    table_lineage: true
+    input_output: true
   expected_definitions_module: data_platform.orchestration

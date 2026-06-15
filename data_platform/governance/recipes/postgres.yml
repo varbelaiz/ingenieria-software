@@ -6,7 +6,7 @@ source:
     host_port: localhost:5433
     database: warehouse
     username: warehouse
-    password: warehouse
+    password: ${WAREHOUSE_PASSWORD}
     env: DEV
     include_tables: true
     include_views: true
