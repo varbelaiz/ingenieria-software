@@ -99,7 +99,11 @@ services:
       MB_DB_DBNAME: ${METABASE_DB_NAME:-metabase}
       MB_DB_USER: ${METABASE_DB_USER:-metabase}
       MB_DB_PASS: ${METABASE_DB_PASSWORD:-metabase}
-      MB_ENCRYPTION_SECRET_KEY: ${MB_ENCRYPTION_SECRET_KEY}
+      MB_ENCRYPTION_SECRET_KEY: ${MB_ENCRYPTION_SECRET_KEY:?set a random secret in .env.data}
+      # Raise Metabase's default 2000-row result cap so native queries are not
+      # silently truncated as the warehouse grows.
+      MB_AGGREGATED_QUERY_ROW_LIMIT: ${MB_AGGREGATED_QUERY_ROW_LIMIT:-100000}
+      MB_UNAGGREGATED_QUERY_ROW_LIMIT: ${MB_UNAGGREGATED_QUERY_ROW_LIMIT:-100000}
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:3000/api/health"]
       interval: 15s

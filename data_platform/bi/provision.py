@@ -173,6 +173,54 @@ def _as_list(response: Any) -> list[dict[str, Any]]:
     return list(response)
 
 
+def prune_sample_content(client: MetabaseClient) -> None:
+    """Remove Metabase's bundled sample content for a clean, reproducible instance.
+
+    Metabase ships a "Sample Database" (flagged ``is_sample``) and an "Examples"
+    collection (also ``is_sample``) holding the "E-commerce Insights" dashboard.
+    Deleting the database does not cascade to that collection, so this also archives
+    the sample collections and their dashboards. Idempotent: does nothing when the
+    sample content is already gone, and tolerates failures so it never blocks the
+    rest of provisioning.
+    """
+    for database in _as_list(client.request("GET", "/database")):
+        if not database.get("is_sample"):
+            continue
+        database_id = int(database["id"])
+        try:
+            client.request("DELETE", f"/database/{database_id}")
+            print(f"Removed Metabase sample database id={database_id}")
+        except requests.RequestException as exc:
+            print(f"Could not remove sample database id={database_id}: {exc}")
+
+    sample_collection_ids = {
+        collection["id"]
+        for collection in _as_list(client.request("GET", "/collection"))
+        if collection.get("is_sample")
+    }
+    if not sample_collection_ids:
+        return
+
+    for dashboard in _as_list(client.request("GET", "/dashboard")):
+        if dashboard.get("collection_id") not in sample_collection_ids:
+            continue
+        dashboard_id = int(dashboard["id"])
+        try:
+            client.request("PUT", f"/dashboard/{dashboard_id}", json={"archived": True})
+            print(f"Archived Metabase sample dashboard id={dashboard_id}")
+        except requests.RequestException as exc:
+            print(f"Could not archive sample dashboard id={dashboard_id}: {exc}")
+
+    for collection_id in sample_collection_ids:
+        try:
+            client.request(
+                "PUT", f"/collection/{collection_id}", json={"archived": True}
+            )
+            print(f"Archived Metabase sample collection id={collection_id}")
+        except requests.RequestException as exc:
+            print(f"Could not archive sample collection id={collection_id}: {exc}")
+
+
 def ensure_database(client: MetabaseClient, settings: MetabaseSettings) -> int:
     """Register the warehouse as a Postgres data source (idempotent by name)."""
     for database in _as_list(client.request("GET", "/database")):
@@ -265,17 +313,29 @@ def ensure_dashboard(
         dashboard_id = int(created["id"])
 
     dashcards = []
+    row = 0
+    col = 0
     for index, card_name in enumerate(dashboard.card_names):
+        full_width = metabase_config.get_card(card_name).full_width
+        width = GRID_WIDTH if full_width else CARD_WIDTH
+        # Wrap to the next row when the card does not fit in the remaining width.
+        if col + width > GRID_WIDTH:
+            row += CARD_HEIGHT
+            col = 0
         dashcards.append(
             {
                 "id": -(index + 1),
                 "card_id": card_ids[card_name],
-                "row": (index // 2) * CARD_HEIGHT,
-                "col": (index % 2) * CARD_WIDTH,
-                "size_x": CARD_WIDTH,
+                "row": row,
+                "col": col,
+                "size_x": width,
                 "size_y": CARD_HEIGHT,
             }
         )
+        col += width
+        if col >= GRID_WIDTH:
+            row += CARD_HEIGHT
+            col = 0
 
     client.request("PUT", f"/dashboard/{dashboard_id}", json={"dashcards": dashcards})
     return dashboard_id
@@ -288,6 +348,8 @@ def provision() -> int:
 
     client.wait_until_healthy()
     client.authenticate()
+
+    prune_sample_content(client)
 
     database_id = ensure_database(client, settings)
     collection_id = ensure_collection(client)

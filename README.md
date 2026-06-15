@@ -92,6 +92,13 @@ el comando converge al mismo estado sin duplicar. El dashboard "Produccion de po
 convencionales" incluye produccion de gas por cuenca, petroleo por operadora, top pozos,
 evolucion mensual y la marca de calidad de los datos.
 
+El provisioning tambien elimina el contenido de ejemplo que trae Metabase (la "Sample
+Database" y su dashboard), dejando la instancia limpia. El compose sube el tope de filas
+por query (`MB_*_QUERY_ROW_LIMIT`) por encima del default de 2000 para que ninguna card se
+trunque silenciosamente al crecer los datos. Las credenciales por defecto
+(`METABASE_ADMIN_*`, `MB_ENCRYPTION_SECRET_KEY`, `metabase_ro`) son solo para uso local:
+rotalas y usa un secreto aleatorio real en cualquier despliegue compartido.
+
 ## Testing y calidad
 
 ```bash

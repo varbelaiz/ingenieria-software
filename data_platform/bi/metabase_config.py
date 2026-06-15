@@ -12,6 +12,7 @@ applies them idempotently against the Metabase REST API.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 # All BI queries read exclusively from the gold layer of the warehouse.
 WAREHOUSE_SCHEMA = "gold"
@@ -28,7 +29,34 @@ VALID_DISPLAYS = frozenset({DISPLAY_LINE, DISPLAY_BAR, DISPLAY_TABLE})
 
 
 @dataclass(frozen=True)
-class Card:
+class ColumnFormatRule:
+    """A single conditional-formatting rule for a Metabase table column.
+
+    Maps to one entry of ``table.column_formatting``: when ``column`` satisfies
+    ``operator``/``value`` the cell (or whole row, if ``highlight_row``) is painted
+    with ``color``.
+    """
+
+    column: str
+    operator: str
+    value: str
+    color: str
+    highlight_row: bool = False
+
+    def to_metabase(self) -> dict[str, Any]:
+        """Render this rule as a Metabase ``table.column_formatting`` entry."""
+        return {
+            "columns": [self.column],
+            "type": "single",
+            "operator": self.operator,
+            "value": self.value,
+            "color": self.color,
+            "highlight_row": self.highlight_row,
+        }
+
+
+@dataclass(frozen=True)
+class Card:  # pylint: disable=too-many-instance-attributes
     """A single Metabase question backed by a native SQL query over the gold layer."""
 
     name: str
@@ -37,19 +65,37 @@ class Card:
     display: str
     dimensions: tuple[str, ...] = field(default_factory=tuple)
     metrics: tuple[str, ...] = field(default_factory=tuple)
+    # Metrics to plot on the secondary (right) Y axis; only meaningful for charts.
+    right_axis_metrics: tuple[str, ...] = field(default_factory=tuple)
+    # Conditional-formatting rules; only meaningful for table displays.
+    conditional_formats: tuple[ColumnFormatRule, ...] = field(default_factory=tuple)
+    # Whether this card spans the full dashboard width instead of half.
+    full_width: bool = False
 
-    def visualization_settings(self) -> dict[str, list[str]]:
-        """Build Metabase ``visualization_settings`` for graph displays.
+    def visualization_settings(self) -> dict[str, Any]:
+        """Build Metabase ``visualization_settings`` for this card's display.
 
-        Tables need no axis mapping; line and bar charts map result columns to the
-        dimension (x axis / breakout) and metric (y axis) roles.
+        Tables optionally carry conditional-formatting rules; line and bar charts
+        map result columns to the dimension (x axis / breakout) and metric (y axis)
+        roles, and may pin some metrics to the secondary (right) axis.
         """
         if self.display == DISPLAY_TABLE:
-            return {}
-        return {
+            if not self.conditional_formats:
+                return {}
+            return {
+                "table.column_formatting": [
+                    rule.to_metabase() for rule in self.conditional_formats
+                ]
+            }
+        settings: dict[str, Any] = {
             "graph.dimensions": list(self.dimensions),
             "graph.metrics": list(self.metrics),
         }
+        if self.right_axis_metrics:
+            settings["series_settings"] = {
+                metric: {"axis": "right"} for metric in self.right_axis_metrics
+            }
+        return settings
 
 
 @dataclass(frozen=True)
@@ -85,18 +131,35 @@ CARDS: tuple[Card, ...] = (
     Card(
         name="Producción de petróleo por operadora",
         description=(
-            "Petróleo producido por operadora a lo largo del tiempo, para ver el "
-            "aporte de cada empresa."
+            "Petróleo producido por las 8 operadoras de mayor producción acumulada a "
+            "lo largo del tiempo; el resto se agrupa en 'Otras'. Acotar las series "
+            "mantiene el gráfico legible y evita el truncado de resultados."
         ),
         sql=(
+            "with acumulado as (\n"
+            "    select e.empresa as operadora, sum(f.prod_petroleo) as total\n"
+            "    from gold.fct_produccion as f\n"
+            "    join gold.dim_empresa as e on f.empresa_key = e.empresa_key\n"
+            "    group by e.empresa\n"
+            "),\n"
+            "ranking as (\n"
+            "    select operadora, row_number() over (order by total desc) as rn\n"
+            "    from acumulado\n"
+            "),\n"
+            "etiqueta as (\n"
+            "    select operadora,\n"
+            "        case when rn <= 8 then operadora else 'Otras' end as grupo\n"
+            "    from ranking\n"
+            ")\n"
             "select\n"
             "    f.periodo as periodo,\n"
-            "    e.empresa as operadora,\n"
+            "    t.grupo as operadora,\n"
             "    sum(f.prod_petroleo) as prod_petroleo\n"
             "from gold.fct_produccion as f\n"
             "join gold.dim_empresa as e on f.empresa_key = e.empresa_key\n"
-            "group by f.periodo, e.empresa\n"
-            "order by f.periodo, e.empresa"
+            "join etiqueta as t on t.operadora = e.empresa\n"
+            "group by f.periodo, t.grupo\n"
+            "order by f.periodo, t.grupo"
         ),
         display=DISPLAY_LINE,
         dimensions=("periodo", "operadora"),
@@ -140,6 +203,9 @@ CARDS: tuple[Card, ...] = (
         display=DISPLAY_LINE,
         dimensions=("periodo",),
         metrics=("prod_gas", "prod_petroleo", "prod_agua"),
+        # Gas dwarfs petróleo/agua early on; move the smaller series to the right
+        # axis so they stay readable instead of flattening against zero.
+        right_axis_metrics=("prod_petroleo", "prod_agua"),
     ),
     Card(
         name="Marca de calidad de los datos",
@@ -158,6 +224,23 @@ CARDS: tuple[Card, ...] = (
             "order by case when status = 'ERROR' then 0 else 1 end, check_name"
         ),
         display=DISPLAY_TABLE,
+        full_width=True,
+        conditional_formats=(
+            # Whole row turns red when a check is in ERROR, green when it passes.
+            ColumnFormatRule(
+                column="status",
+                operator="=",
+                value="ERROR",
+                color="#ED6E6E",
+                highlight_row=True,
+            ),
+            ColumnFormatRule(
+                column="status",
+                operator="=",
+                value="PASS",
+                color="#84BB4C",
+            ),
+        ),
     ),
 )
 

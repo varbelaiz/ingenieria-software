@@ -105,6 +105,7 @@ def _load_invalid_quality_fixture(warehouse_connection: Any) -> None:
     )
 
 
+@pytest.mark.warehouse_mutating
 def test_dbt_build_persists_failure_rows_for_invalid_gold_data(
     warehouse_connection: Any,
     monkeypatch: pytest.MonkeyPatch,
