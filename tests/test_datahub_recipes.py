@@ -120,8 +120,7 @@ def test_dagster_recipe_documents_expected_sensor_configuration() -> None:
     assert sensor["dagster"]["url"] == "http://localhost:3001"
     assert sensor["capture"] == {
         "asset_materialization": True,
-        "pipeline_runs": True,
-        "table_lineage": True,
+        "input_output": True,
     }
     definitions_module = sensor["expected_definitions_module"]
     assert definitions_module == "data_platform.orchestration"
