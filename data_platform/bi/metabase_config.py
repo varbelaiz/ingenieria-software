@@ -155,7 +155,7 @@ CARDS: tuple[Card, ...] = (
             "    failed_rows,\n"
             "    checked_at\n"
             "from gold.quality_marks\n"
-            "order by status desc, check_name"
+            "order by case when status = 'ERROR' then 0 else 1 end, check_name"
         ),
         display=DISPLAY_TABLE,
     ),

@@ -13,7 +13,7 @@ Configuration is taken from environment variables (see ``.env.data.example``):
     METABASE_URL, METABASE_ADMIN_EMAIL, METABASE_ADMIN_PASSWORD,
     METABASE_ADMIN_FIRST_NAME, METABASE_ADMIN_LAST_NAME,
     METABASE_WAREHOUSE_HOST, METABASE_WAREHOUSE_PORT,
-    WAREHOUSE_DB, WAREHOUSE_USER, WAREHOUSE_PASSWORD.
+    WAREHOUSE_DB, METABASE_WAREHOUSE_USER, METABASE_WAREHOUSE_PASSWORD.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from dataclasses import dataclass
 import os
 import sys
 import time
-from typing import Any
+from typing import Any, cast
 
 import requests
 
@@ -51,8 +51,8 @@ class MetabaseSettings:  # pylint: disable=too-many-instance-attributes
     warehouse_host: str
     warehouse_port: int
     warehouse_db: str
-    warehouse_user: str
-    warehouse_password: str
+    metabase_warehouse_user: str
+    metabase_warehouse_password: str
 
 
 def settings_from_env() -> MetabaseSettings:
@@ -66,8 +66,8 @@ def settings_from_env() -> MetabaseSettings:
         warehouse_host=os.getenv("METABASE_WAREHOUSE_HOST", "warehouse"),
         warehouse_port=int(os.getenv("METABASE_WAREHOUSE_PORT", "5432")),
         warehouse_db=os.getenv("WAREHOUSE_DB", "warehouse"),
-        warehouse_user=os.getenv("WAREHOUSE_USER", "warehouse"),
-        warehouse_password=os.getenv("WAREHOUSE_PASSWORD", "warehouse"),
+        metabase_warehouse_user=os.getenv("METABASE_WAREHOUSE_USER", "metabase_ro"),
+        metabase_warehouse_password=os.getenv("METABASE_WAREHOUSE_PASSWORD", ""),
     )
 
 
@@ -88,7 +88,9 @@ class MetabaseClient:
             headers["X-Metabase-Session"] = self._token
         return headers
 
-    def request(self, method: str, path: str, **kwargs: Any) -> Any:
+    def request(
+        self, method: str, path: str, **kwargs: Any
+    ) -> dict[str, Any] | list[Any] | None:
         """Issue an API request and return the parsed JSON body (or ``None``)."""
         response = self._session.request(
             method,
@@ -100,7 +102,12 @@ class MetabaseClient:
         response.raise_for_status()
         if not response.content:
             return None
-        return response.json()
+        return cast(dict[str, Any] | list[Any] | None, response.json())
+
+    def request_dict(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
+        """Like :meth:`request` but asserts the response is a JSON object."""
+        result = self.request(method, path, **kwargs)
+        return cast(dict[str, Any], result)
 
     def wait_until_healthy(self) -> None:
         """Block until the Metabase health endpoint reports ready."""
@@ -124,7 +131,7 @@ class MetabaseClient:
         instance is set up, so the decision is gated on ``has-user-setup`` to stay
         idempotent across runs.
         """
-        properties = self.request("GET", "/session/properties")
+        properties = self.request_dict("GET", "/session/properties")
         setup_token = properties.get("setup-token")
         has_user_setup = bool(properties.get("has-user-setup"))
         if setup_token and not has_user_setup:
@@ -147,7 +154,7 @@ class MetabaseClient:
                 "allow_tracking": False,
             },
         }
-        result = self.request("POST", "/setup", json=payload)
+        result = self.request_dict("POST", "/setup", json=payload)
         return str(result["id"])
 
     def _login(self) -> str:
@@ -155,7 +162,7 @@ class MetabaseClient:
             "username": self._settings.admin_email,
             "password": self._settings.admin_password,
         }
-        result = self.request("POST", "/session", json=payload)
+        result = self.request_dict("POST", "/session", json=payload)
         return str(result["id"])
 
 
@@ -179,12 +186,12 @@ def ensure_database(client: MetabaseClient, settings: MetabaseSettings) -> int:
             "host": settings.warehouse_host,
             "port": settings.warehouse_port,
             "dbname": settings.warehouse_db,
-            "user": settings.warehouse_user,
-            "password": settings.warehouse_password,
+            "user": settings.metabase_warehouse_user,
+            "password": settings.metabase_warehouse_password,
             "ssl": False,
         },
     }
-    created = client.request("POST", "/database", json=payload)
+    created = client.request_dict("POST", "/database", json=payload)
     return int(created["id"])
 
 
@@ -198,7 +205,7 @@ def ensure_collection(client: MetabaseClient) -> int:
         "name": metabase_config.COLLECTION_NAME,
         "description": "Dashboards y preguntas de la plataforma de datos de pozos.",
     }
-    created = client.request("POST", "/collection", json=payload)
+    created = client.request_dict("POST", "/collection", json=payload)
     return int(created["id"])
 
 
@@ -230,7 +237,7 @@ def ensure_card(
         card_id = existing[card.name]
         client.request("PUT", f"/card/{card_id}", json=payload)
         return card_id
-    created = client.request("POST", "/card", json=payload)
+    created = client.request_dict("POST", "/card", json=payload)
     return int(created["id"])
 
 
@@ -246,7 +253,7 @@ def ensure_dashboard(
             break
 
     if dashboard_id is None:
-        created = client.request(
+        created = client.request_dict(
             "POST",
             "/dashboard",
             json={

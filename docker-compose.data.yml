@@ -89,6 +89,7 @@ services:
       MB_DB_DBNAME: ${METABASE_DB_NAME:-metabase}
       MB_DB_USER: ${METABASE_DB_USER:-metabase}
       MB_DB_PASS: ${METABASE_DB_PASSWORD:-metabase}
+      MB_ENCRYPTION_SECRET_KEY: ${MB_ENCRYPTION_SECRET_KEY}
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:3000/api/health"]
       interval: 15s
