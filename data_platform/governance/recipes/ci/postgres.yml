@@ -1,0 +1,26 @@
+# DataHub ingestion recipe for CI validation of the local PostgreSQL warehouse.
+# Uses a file sink so GitHub Actions does not need a running DataHub GMS.
+source:
+  type: postgres
+  config:
+    host_port: localhost:5433
+    database: warehouse
+    username: warehouse
+    password: warehouse
+    env: DEV
+    include_tables: true
+    include_views: true
+    schema_pattern:
+      allow:
+        - bronze
+        - silver
+        - gold
+        - dbt_test_failures
+      deny:
+        - information_schema
+        - pg_.*
+
+sink:
+  type: file
+  config:
+    filename: /tmp/datahub-postgres-metadata.json

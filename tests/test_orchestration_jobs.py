@@ -199,6 +199,22 @@ def test_definitions_register_monthly_data_pipeline_schedule() -> None:
     assert schedule.execution_timezone == "America/Argentina/Buenos_Aires"
 
 
+def test_definitions_expose_optional_datahub_sensor_hook() -> None:
+    """Governance metadata should have a real Dagster sensor integration point."""
+    assert hasattr(orchestration, "datahub_sensor")
+
+    if orchestration.datahub_sensor is None:
+        assert not orchestration.defs.get_repository_def().has_sensor_def(
+            "datahub_sensor",
+        )
+    else:
+        assert orchestration.datahub_sensor.name == "datahub_sensor"
+        assert (
+            orchestration.defs.get_sensor_def("datahub_sensor")
+            is orchestration.datahub_sensor
+        )
+
+
 def test_monthly_data_pipeline_schedule_requests_monthly_partition() -> None:
     """The monthly schedule should launch the latest closed monthly partition."""
     repository_def = orchestration.defs.get_repository_def()

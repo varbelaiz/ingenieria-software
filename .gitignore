@@ -220,4 +220,5 @@ dagster_home/
 
 # Data platform env
 .env.data
+.env.datahub
 AGENTS.md

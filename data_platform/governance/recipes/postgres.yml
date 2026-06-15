@@ -1,0 +1,26 @@
+# DataHub ingestion recipe for the local PostgreSQL warehouse.
+# Run from the repository root with the data stack exposing Postgres on localhost:5433.
+source:
+  type: postgres
+  config:
+    host_port: localhost:5433
+    database: warehouse
+    username: warehouse
+    password: ${WAREHOUSE_PASSWORD}
+    env: DEV
+    include_tables: true
+    include_views: true
+    schema_pattern:
+      allow:
+        - bronze
+        - silver
+        - gold
+        - dbt_test_failures
+      deny:
+        - information_schema
+        - pg_.*
+
+sink:
+  type: datahub-rest
+  config:
+    server: http://localhost:8080
