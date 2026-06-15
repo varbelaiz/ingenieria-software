@@ -33,10 +33,15 @@ typed as (
     select
         nullif(trim(idpozo), '')::bigint        as id_pozo,
         upper(trim(idempresa))                  as id_empresa,
+        nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['empresa', 'operador'], 'idempresa') }}), '') as empresa,
+        nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['area', 'areapermisoconcesion'], 'NULL') }}), '') as area,
+        nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['cuenca'], 'NULL') }}), '') as cuenca,
+        nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['tipo_recurso', 'tiporecurso', 'recurso'], 'NULL') }}), '') as tipo_recurso,
         make_date(anio::int, mes::int, 1)       as periodo,
         nullif(trim(prod_gas), '')::numeric     as prod_gas,
         nullif(trim(prod_pet), '')::numeric     as prod_petroleo,
         nullif(trim(prod_agua), '')::numeric    as prod_agua,
+        coalesce(nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['dias_produccion', 'diasprod', 'diasefectivos'], 'NULL') }}), '')::integer, 0) as dias_produccion,
         _loaded_at
     from source
 
@@ -57,10 +62,15 @@ deduped as (
 select
     id_pozo,
     id_empresa,
+    empresa,
+    area,
+    cuenca,
+    tipo_recurso,
     periodo,
     prod_gas,
     prod_petroleo,
     prod_agua,
+    dias_produccion,
     _loaded_at
 from deduped
 where _row_num = 1

@@ -1,0 +1,331 @@
+version: 2
+
+models:
+  - name: dim_pozo
+    description: "Dimension de pozos con clave surrogate y columnas compatibles con SCD Tipo 2."
+    data_tests:
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: pozo_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: id_pozo
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: is_current
+    columns:
+      - name: pozo_key
+        description: "Clave surrogate del pozo."
+        data_tests:
+          - not_null
+          - unique
+      - name: id_pozo
+        description: "Identificador natural del pozo."
+        data_tests:
+          - not_null
+          - unique
+      - name: sigla
+        description: "Identificador visible del pozo."
+        data_tests:
+          - not_null
+      - name: formacion_productiva
+        description: "Formacion productiva informada para el pozo."
+        data_tests:
+          - not_null
+      - name: id_empresa
+        description: "Empresa operadora asociada al pozo."
+        data_tests:
+          - not_null
+      - name: area
+        description: "Area productiva asociada al pozo."
+        data_tests:
+          - not_null
+      - name: cuenca
+        description: "Cuenca asociada al pozo."
+        data_tests:
+          - not_null
+      - name: tipo_recurso
+        description: "Tipo de recurso del pozo."
+        data_tests:
+          - not_null
+      - name: valid_from
+        description: "Inicio de vigencia del registro actual."
+        data_tests:
+          - not_null
+      - name: valid_to
+        description: "Fin de vigencia; null para el registro actual."
+      - name: is_current
+        description: "Marca de registro vigente."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+
+  - name: dim_empresa
+    description: "Dimension de empresas operadoras con clave surrogate y columnas compatibles con SCD Tipo 2."
+    data_tests:
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: empresa_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: id_empresa
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: is_current
+    columns:
+      - name: empresa_key
+        description: "Clave surrogate de la empresa."
+        data_tests:
+          - not_null
+          - unique
+      - name: id_empresa
+        description: "Identificador natural normalizado de la empresa."
+        data_tests:
+          - not_null
+          - unique
+      - name: empresa
+        description: "Nombre visible de la empresa."
+        data_tests:
+          - not_null
+      - name: valid_from
+        description: "Inicio de vigencia del registro actual."
+        data_tests:
+          - not_null
+      - name: is_current
+        description: "Marca de registro vigente."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+
+  - name: dim_area
+    description: "Dimension de areas productivas."
+    data_tests:
+      - dbt_expectations.expect_column_distinct_count_to_be_greater_than:
+          arguments:
+            column_name: area
+            value: 1
+    columns:
+      - name: area_key
+        description: "Clave surrogate del area."
+        data_tests:
+          - not_null
+          - unique
+      - name: area
+        description: "Nombre normalizado del area."
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_cuenca
+    description: "Dimension de cuencas productivas."
+    data_tests:
+      - dbt_expectations.expect_column_distinct_count_to_be_greater_than:
+          arguments:
+            column_name: cuenca
+            value: 1
+    columns:
+      - name: cuenca_key
+        description: "Clave surrogate de la cuenca."
+        data_tests:
+          - not_null
+          - unique
+      - name: cuenca
+        description: "Nombre normalizado de la cuenca."
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_tipo_recurso
+    description: "Dimension de tipos de recurso."
+    data_tests:
+      - dbt_expectations.expect_column_distinct_count_to_be_greater_than:
+          arguments:
+            column_name: tipo_recurso
+            value: 1
+    columns:
+      - name: tipo_recurso_key
+        description: "Clave surrogate del tipo de recurso."
+        data_tests:
+          - not_null
+          - unique
+      - name: tipo_recurso
+        description: "Tipo de recurso normalizado."
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_fecha
+    description: "Dimension calendario mensual para la produccion."
+    data_tests:
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: fecha_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: periodo
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: mes
+    columns:
+      - name: fecha_key
+        description: "Clave surrogate del periodo mensual."
+        data_tests:
+          - not_null
+          - unique
+      - name: periodo
+        description: "Primer dia del mes de produccion."
+        data_tests:
+          - not_null
+          - unique
+      - name: anio
+        description: "Anio calendario del periodo."
+        data_tests:
+          - not_null
+      - name: mes
+        description: "Mes calendario del periodo."
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                max_value: 12
+      - name: trimestre
+        description: "Trimestre calendario del periodo."
+        data_tests:
+          - not_null
+
+  - name: fct_produccion
+    description: "Fact table de produccion mensual. Grano: un pozo por periodo."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - id_pozo
+              - periodo
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: produccion_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: pozo_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: empresa_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: fecha_key
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: prod_gas
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: prod_petroleo
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: prod_agua
+      - dbt_expectations.expect_column_to_exist:
+          arguments:
+            column_name: dias_produccion
+    columns:
+      - name: produccion_key
+        description: "Clave surrogate de la fila fact."
+        data_tests:
+          - not_null
+          - unique
+      - name: pozo_key
+        description: "FK a dim_pozo."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pozo')
+                field: pozo_key
+      - name: empresa_key
+        description: "FK a dim_empresa."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_empresa')
+                field: empresa_key
+      - name: area_key
+        description: "FK a dim_area."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_area')
+                field: area_key
+      - name: cuenca_key
+        description: "FK a dim_cuenca."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cuenca')
+                field: cuenca_key
+      - name: tipo_recurso_key
+        description: "FK a dim_tipo_recurso."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tipo_recurso')
+                field: tipo_recurso_key
+      - name: fecha_key
+        description: "FK a dim_fecha."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: fecha_key
+      - name: id_pozo
+        description: "Clave natural del pozo para auditoria del grano."
+        data_tests:
+          - not_null
+      - name: id_empresa
+        description: "Clave natural de la empresa para auditoria."
+        data_tests:
+          - not_null
+      - name: periodo
+        description: "Periodo mensual de produccion."
+        data_tests:
+          - not_null
+      - name: prod_gas
+        description: "Produccion de gas del periodo."
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+      - name: prod_petroleo
+        description: "Produccion de petroleo del periodo."
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+      - name: prod_agua
+        description: "Produccion de agua del periodo."
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+      - name: dias_produccion
+        description: "Dias de produccion del periodo."
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                max_value: 31
+      - name: _loaded_at
+        description: "Marca tecnica de carga original."
+        data_tests:
+          - not_null
