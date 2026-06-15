@@ -15,6 +15,7 @@ La documentación técnica completa está en [`docs/`](docs/index.md):
 - [Monitoreo](docs/monitoring.md) — Prometheus, Grafana y métricas
 - [Load Testing](docs/load-testing.md) — tráfico sintético con Locust
 - [Ops](docs/ops.md) — deploy, secretos y monitoreo operativo
+- [Runbook de Data Engineer](docs/runbooks/data-engineer.md) — backfill histórico y verificación de reprocesos
 
 ## Requisitos
 

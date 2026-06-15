@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -26,10 +27,11 @@ def build_dbt_build_command(
     select: str = DBT_SELECT,
     project_dir: Path = DBT_PROJECT_DIR,
     profiles_dir: Path = DBT_PROFILES_DIR,
+    reprocess_period: str | None = None,
 ) -> list[str]:
     """Build the canonical dbt build command used by orchestration."""
     dbt_executable = shutil.which("dbt") or "dbt"
-    return [
+    command = [
         dbt_executable,
         "build",
         "--select",
@@ -39,6 +41,14 @@ def build_dbt_build_command(
         "--profiles-dir",
         str(profiles_dir),
     ]
+    if reprocess_period is not None:
+        command.extend(
+            [
+                "--vars",
+                json.dumps({"reprocess_period": reprocess_period}),
+            ]
+        )
+    return command
 
 
 def build_dbt_source_freshness_command(
@@ -62,10 +72,15 @@ def build_dbt_source_freshness_command(
 def run_dbt_build(
     command: Sequence[str] | None = None,
     *,
+    reprocess_period: str | None = None,
     runner: CompletedProcessRunner = subprocess.run,
 ) -> subprocess.CompletedProcess[str]:
     """Run dbt build and fail fast when quality checks do not pass."""
-    build_command = list(command) if command is not None else build_dbt_build_command()
+    build_command = (
+        list(command)
+        if command is not None
+        else build_dbt_build_command(reprocess_period=reprocess_period)
+    )
     completed = runner(
         build_command,
         check=False,

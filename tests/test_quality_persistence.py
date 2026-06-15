@@ -167,6 +167,41 @@ def test_build_dbt_build_command_uses_expected_directories() -> None:
     ]
 
 
+def test_build_dbt_build_command_can_scope_reprocess_period() -> None:
+    """Partitioned backfills should pass the selected month through dbt vars."""
+    command = build_dbt_build_command(reprocess_period="2026-05-01")
+
+    assert command[-2:] == [
+        "--vars",
+        '{"reprocess_period": "2026-05-01"}',
+    ]
+
+
+def test_run_dbt_build_passes_reprocess_period_to_runner() -> None:
+    """run_dbt_build should build a scoped command for partitioned backfills."""
+    captured_command: list[str] = []
+
+    def successful_runner(
+        command: list[str],
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]:
+        del kwargs
+        captured_command.extend(command)
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout="dbt ok",
+            stderr="",
+        )
+
+    run_dbt_build(reprocess_period="2026-05-01", runner=successful_runner)
+
+    assert captured_command[-2:] == [
+        "--vars",
+        '{"reprocess_period": "2026-05-01"}',
+    ]
+
+
 def test_run_dbt_build_raises_on_non_zero_exit_code() -> None:
     """The helper should raise when dbt exits with a failing quality gate."""
 

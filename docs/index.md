@@ -10,3 +10,4 @@
 | [Monitoreo](monitoring.md) | Stack Prometheus + Grafana, métricas y dashboard |
 | [Load Testing](load-testing.md) | Tráfico sintético con Locust, presets y ejecución |
 | [Ops](ops.md) | Deploy, secretos y monitoreo operativo en alto nivel |
+| [Runbook de Data Engineer](runbooks/data-engineer.md) | Reproceso histórico de particiones, verificación de idempotencia y revisión de resultados |
