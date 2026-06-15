@@ -15,19 +15,31 @@ with pozos as (
 
 ),
 
-grouped as (
+ranked as (
+
+    select
+        *,
+        row_number() over (
+            partition by id_pozo
+            order by _loaded_at desc
+        ) as _row_num
+    from pozos
+
+),
+
+latest as (
 
     select
         id_pozo,
-        max(sigla) as sigla,
-        max(formacion_productiva) as formacion_productiva,
-        max(id_empresa) as id_empresa,
-        max(area) as area,
-        max(cuenca) as cuenca,
-        max(tipo_recurso) as tipo_recurso,
-        min(_loaded_at) as valid_from
-    from pozos
-    group by id_pozo
+        sigla,
+        formacion_productiva,
+        id_empresa,
+        area,
+        cuenca,
+        tipo_recurso,
+        _loaded_at as valid_from
+    from ranked
+    where _row_num = 1
 
 )
 
@@ -43,4 +55,4 @@ select
     valid_from,
     null::timestamptz as valid_to,
     true as is_current
-from grouped
+from latest

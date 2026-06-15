@@ -6,6 +6,7 @@ from collections.abc import Mapping
 import csv
 from dataclasses import dataclass
 import io
+import re
 
 import httpx
 
@@ -74,7 +75,11 @@ def _parse_csv_response(content: bytes) -> list[dict[str, str]]:
 
 
 def _normalize_header(header: str) -> str:
-    return header.lstrip("\ufeff").strip()
+    header = header.lstrip("\ufeff").strip().lower()
+    header = re.sub(r"[^a-z0-9_]", "_", header)
+    if header and header[0].isdigit():
+        header = "_" + header
+    return header
 
 
 def _normalize_row(

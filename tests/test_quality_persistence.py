@@ -12,6 +12,8 @@ from typing import Any
 import pytest
 
 psycopg2 = pytest.importorskip("psycopg2")
+from psycopg2 import sql  # noqa: E402
+
 pytest.importorskip("dagster")
 
 from dagster import build_hook_context  # noqa: E402
@@ -142,9 +144,9 @@ def test_dbt_build_persists_failure_rows_for_invalid_gold_data(
         persisted_failure_rows = 0
         for table_name in failure_tables:
             cursor.execute(
-                psycopg2.sql.SQL("SELECT count(*) FROM {}.{}").format(
-                    psycopg2.sql.Identifier("dbt_test_failures"),
-                    psycopg2.sql.Identifier(table_name),
+                sql.SQL("SELECT count(*) FROM {}.{}").format(
+                    sql.Identifier("dbt_test_failures"),
+                    sql.Identifier(table_name),
                 )
             )
             persisted_failure_rows += int(cursor.fetchone()[0])

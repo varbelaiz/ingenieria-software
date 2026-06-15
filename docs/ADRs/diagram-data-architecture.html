@@ -24,36 +24,36 @@
 
   <div class="mermaid">
 flowchart TD
-    subgraph Fuentes["🌐 Fuentes externas"]
+    subgraph Fuentes["Fuentes externas"]
         S1["datos.gob.ar\nProducción pozos"]
         S2["datos.gob.ar\nListado pozos"]
     end
 
-    subgraph Orq["⚙️ Orquestación — Dagster"]
+    subgraph Orq["Orquestación — Dagster"]
         DAG["Assets particionados\n+ RetryPolicy backoff\n+ Schedule mensual"]
     end
 
-    subgraph PG["🐘 PostgreSQL 16 — Warehouse"]
-        B["📦 Schema: bronze\nDatos crudos\nparticionados"]
-        SL["🔧 Schema: silver\nLimpieza · tipado\ndedup · merge"]
-        G["⭐ Schema: gold\nModelo estrella\nfct + dims"]
-        QM["✅ quality_marks\n(vista resumen checks)"]
-        TF["🔴 dbt_test_failures\n(store_failures)"]
+    subgraph PG["PostgreSQL 16 — Warehouse"]
+        B["Schema: bronze\nDatos crudos\nparticionados"]
+        SL["Schema: silver\nLimpieza · tipado\ndedup · merge"]
+        G["Schema: gold\nModelo estrella\nfct + dims"]
+        QM["quality_marks\n(vista resumen checks)"]
+        TF["dbt_test_failures\n(store_failures)"]
     end
 
-    subgraph DBT["🔄 dbt — Transformación"]
+    subgraph DBT["dbt — Transformación"]
         BR["stg_produccion.sql\nstg_pozos.sql"]
         DIM["dim_pozo · dim_empresa\ndim_cuenca · dim_area\ndim_fecha · dim_tipo_recurso"]
         FCT["fct_produccion\ngrano: pozo × mes"]
     end
 
-    subgraph Gov["🏛️ DataHub — Gobierno"]
+    subgraph Gov["DataHub — Gobierno"]
         LIN["Lineage tabla\nbronze → silver → gold"]
         FRE["Freshness"]
         WFL["Workflows Dagster"]
     end
 
-    subgraph BI["📊 Metabase — BI"]
+    subgraph BI["Metabase — BI"]
         DASH["Dashboards\nProducción · Cuencas\nOperadoras · Calidad"]
     end
 
