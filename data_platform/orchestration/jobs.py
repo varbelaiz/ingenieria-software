@@ -6,6 +6,8 @@ from urllib import error, request
 
 from dagster import (
     HookContext,
+    In,
+    Nothing,
     OpExecutionContext,
     failure_hook,
     job,
@@ -13,7 +15,7 @@ from dagster import (
 )
 from dagster._core.errors import DagsterInvalidPropertyError
 
-from data_platform.orchestration.dbt import run_dbt_build
+from data_platform.orchestration.dbt import run_dbt_build, run_dbt_source_freshness
 
 
 ALERT_WEBHOOK_ENV = "DATA_QUALITY_ALERT_WEBHOOK_URL"
@@ -41,11 +43,11 @@ def emit_data_quality_alert(
     """Log a structured alert and optionally forward it to a webhook."""
     op_name = "unknown"
     try:
-        op = context.op
+        op_def = context.op
     except (AttributeError, DagsterInvalidPropertyError):
-        op = None
-    if op is not None:
-        op_name = op.name
+        op_def = None
+    if op_def is not None:
+        op_name = op_def.name
     payload = {
         "event": "data_quality_job_failed",
         "job_name": _safe_context_value(context, "job_name", "data_quality_job"),
@@ -64,7 +66,11 @@ def _send_data_quality_webhook(
     payload: dict[str, str],
     webhook_url: str,
 ) -> None:
-    """Send the alert payload to an optional webhook without blocking the PR."""
+    """Send the alert payload to a webhook at Dagster job runtime."""
+    if not webhook_url.startswith("https://"):
+        raise ValueError(
+            f"Webhook URL must start with 'https://'; got: {webhook_url!r}"
+        )
     webhook_request = request.Request(
         webhook_url,
         data=json.dumps(payload).encode("utf-8"),
@@ -92,6 +98,16 @@ def data_quality_failure_hook(context: HookContext) -> None:
 
 
 @op
+def run_dbt_quality_source_freshness(context: OpExecutionContext) -> None:
+    """Check source freshness so stale data blocks downstream promotion."""
+    completed = run_dbt_source_freshness()
+    if completed.stdout:
+        context.log.info(completed.stdout)
+    if completed.stderr:
+        context.log.info(completed.stderr)
+
+
+@op(ins={"_freshness": In(Nothing)})
 def run_dbt_quality_build(context: OpExecutionContext) -> None:
     """Execute dbt build so failing tests block downstream promotion."""
     completed = run_dbt_build()
@@ -106,4 +122,4 @@ def data_quality_job() -> None:
     """Minimal Dagster job that enforces silver/gold data quality."""
     # Dagster injects the op context at runtime.
     # pylint: disable=no-value-for-parameter
-    run_dbt_quality_build()
+    run_dbt_quality_build(run_dbt_quality_source_freshness())
