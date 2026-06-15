@@ -81,7 +81,10 @@ def _reset_quality_schemas(warehouse_connection: Any) -> None:
 
 def _load_invalid_quality_fixture(warehouse_connection: Any) -> None:
     invalid_produccion_rows = [dict(row) for row in PRODUCCION_FIXTURE]
-    invalid_produccion_rows[0]["prod_gas"] = "-1.000"
+    # Blank out a required measure so it lands in gold as NULL and trips the
+    # not_null quality gate on fct_produccion.prod_gas. (A negative value would
+    # be filtered out in silver, so it never reaches a gold gate.)
+    invalid_produccion_rows[0]["prod_gas"] = ""
 
     load_bronze_table(
         warehouse_connection,
