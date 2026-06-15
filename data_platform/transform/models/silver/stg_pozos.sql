@@ -17,12 +17,15 @@ deduped as (
     select
         nullif(trim(idpozo), '')::bigint    as id_pozo,
         nullif(trim(sigla), '')             as sigla,
-        nullif(trim(formprod), '')          as formacion_productiva,
+        coalesce(nullif(trim(formprod), ''), 'SIN DATO') as formacion_productiva,
         upper(trim(idempresa))              as id_empresa,
         nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['empresa', 'operador'], 'idempresa') }}), '') as empresa,
-        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['area', 'areapermisoconcesion'], 'NULL') }}), '') as area,
-        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['cuenca'], 'NULL') }}), '') as cuenca,
-        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['tipo_recurso', 'tiporecurso', 'recurso'], 'NULL') }}), '') as tipo_recurso,
+        -- Igual que en produccion: `area`/`tipo_recurso` planas vienen vacías en la
+        -- fuente real. Para pozos el tipo de recurso poblado es `tipo_reservorio`
+        -- (no existe `tipo_de_recurso`). Unknown member 'SIN DATO' para gaps genuinos.
+        coalesce(nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['areayacimiento', 'areapermisoconcesion', 'area'], 'NULL') }}), ''), 'SIN DATO') as area,
+        coalesce(nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['cuenca'], 'NULL') }}), ''), 'SIN DATO') as cuenca,
+        coalesce(nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['tipo_de_recurso', 'tipo_reservorio', 'sub_tipo_recurso', 'subtipo_reservorio', 'tipo_recurso', 'tiporecurso', 'recurso'], 'NULL') }}), ''), 'SIN DATO') as tipo_recurso,
         _loaded_at,
         row_number() over (
             partition by nullif(trim(idpozo), '')::bigint
