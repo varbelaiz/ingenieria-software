@@ -22,18 +22,18 @@ def test_source_maps_to_bronze_asset_key() -> None:
 
 
 def test_model_keeps_default_asset_key() -> None:
-    """dbt models should keep the default DagsterDbtTranslator asset key."""
+    """dbt models use schema-prefixed asset keys matching the real manifest."""
     translator = BronzeSourceTranslator()
     props = {
         "resource_type": "model",
         "name": "stg_produccion",
         "unique_id": "model.ingenieria_software.stg_produccion",
         "fqn": ["ingenieria_software", "silver", "stg_produccion"],
-        "config": {"schema": None},
+        "config": {"schema": "silver"},
         "meta": {},
         "version": None,
     }
-    assert translator.get_asset_key(props) == AssetKey(["stg_produccion"])
+    assert translator.get_asset_key(props) == AssetKey(["silver", "stg_produccion"])
 
 
 def test_build_args_without_partition() -> None:

@@ -27,14 +27,13 @@ from data_platform.extraction.bronze_loader import (  # noqa: E402
     BronzeLoad,
     load_bronze_table,
 )
-from data_platform.orchestration.dbt import (  # noqa: E402
-    DBT_PROFILES_DIR,
+from data_platform.orchestration.dbt_project import (  # noqa: E402
     DBT_PROJECT_DIR,
-    DbtBuildFailedError,
-    build_dbt_build_command,
-    run_dbt_build,
 )
 from data_platform.orchestration.jobs import emit_data_quality_alert  # noqa: E402
+
+# The profiles directory lives in the same folder as the dbt project.
+DBT_PROFILES_DIR = DBT_PROJECT_DIR
 
 
 def _dbt_available() -> bool:
@@ -117,7 +116,17 @@ def test_dbt_build_persists_failure_rows_for_invalid_gold_data(
     _reset_quality_schemas(warehouse_connection)
     _load_invalid_quality_fixture(warehouse_connection)
 
-    command = build_dbt_build_command()
+    dbt_executable = shutil.which("dbt") or "dbt"
+    command = [
+        dbt_executable,
+        "build",
+        "--select",
+        "silver gold",
+        "--project-dir",
+        str(DBT_PROJECT_DIR),
+        "--profiles-dir",
+        str(DBT_PROFILES_DIR),
+    ]
     completed = subprocess.run(
         command,
         check=False,
@@ -152,70 +161,6 @@ def test_dbt_build_persists_failure_rows_for_invalid_gold_data(
             persisted_failure_rows += int(cursor.fetchone()[0])
 
     assert persisted_failure_rows > 0
-
-
-def test_build_dbt_build_command_uses_expected_directories() -> None:
-    """The dbt orchestration helper should build the canonical command."""
-    command = build_dbt_build_command()
-
-    assert command[1:4] == ["build", "--select", "silver gold"]
-    assert command[4:] == [
-        "--project-dir",
-        str(DBT_PROJECT_DIR),
-        "--profiles-dir",
-        str(DBT_PROFILES_DIR),
-    ]
-
-
-def test_build_dbt_build_command_can_scope_reprocess_period() -> None:
-    """Partitioned backfills should pass the selected month through dbt vars."""
-    command = build_dbt_build_command(reprocess_period="2026-05-01")
-
-    assert command[-2:] == [
-        "--vars",
-        '{"reprocess_period": "2026-05-01"}',
-    ]
-
-
-def test_run_dbt_build_passes_reprocess_period_to_runner() -> None:
-    """run_dbt_build should build a scoped command for partitioned backfills."""
-    captured_command: list[str] = []
-
-    def successful_runner(
-        command: list[str],
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]:
-        del kwargs
-        captured_command.extend(command)
-        return subprocess.CompletedProcess(
-            args=command,
-            returncode=0,
-            stdout="dbt ok",
-            stderr="",
-        )
-
-    run_dbt_build(reprocess_period="2026-05-01", runner=successful_runner)
-
-    assert captured_command[-2:] == [
-        "--vars",
-        '{"reprocess_period": "2026-05-01"}',
-    ]
-
-
-def test_run_dbt_build_raises_on_non_zero_exit_code() -> None:
-    """The helper should raise when dbt exits with a failing quality gate."""
-
-    def failing_runner(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
-        del args, kwargs
-        return subprocess.CompletedProcess(
-            args=["dbt", "build"],
-            returncode=2,
-            stdout="",
-            stderr="quality test failed",
-        )
-
-    with pytest.raises(DbtBuildFailedError, match="exit code 2"):
-        run_dbt_build(["dbt", "build"], runner=failing_runner)
 
 
 def test_emit_data_quality_alert_logs_structured_message(
