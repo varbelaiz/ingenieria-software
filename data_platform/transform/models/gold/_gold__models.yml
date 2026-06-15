@@ -103,6 +103,11 @@ models:
 
   - name: dim_area
     description: "Dimension de areas productivas."
+    data_tests:
+      - dbt_expectations.expect_column_distinct_count_to_be_greater_than:
+          arguments:
+            column_name: area
+            value: 1
     columns:
       - name: area_key
         description: "Clave surrogate del area."
@@ -117,6 +122,11 @@ models:
 
   - name: dim_cuenca
     description: "Dimension de cuencas productivas."
+    data_tests:
+      - dbt_expectations.expect_column_distinct_count_to_be_greater_than:
+          arguments:
+            column_name: cuenca
+            value: 1
     columns:
       - name: cuenca_key
         description: "Clave surrogate de la cuenca."
@@ -131,6 +141,11 @@ models:
 
   - name: dim_tipo_recurso
     description: "Dimension de tipos de recurso."
+    data_tests:
+      - dbt_expectations.expect_column_distinct_count_to_be_greater_than:
+          arguments:
+            column_name: tipo_recurso
+            value: 1
     columns:
       - name: tipo_recurso_key
         description: "Clave surrogate del tipo de recurso."

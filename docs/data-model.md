@@ -45,6 +45,17 @@ PR se cargan como estado vigente de silver: `valid_to` queda en null e `is_curre
 true. Esto deja un contrato compatible con SCD Tipo 2 sin inventar historia que la
 fuente actual todavia no preserva como cambios dimensionables.
 
+### Estrategia SCD por dimension
+
+| Dimension | Estrategia SCD | Razon |
+|-----------|----------------|-------|
+| `dim_pozo` | SCD Tipo 2 (forma) | Mantiene `valid_from`, `valid_to`, `is_current`; actualmente un solo registro vigente por pozo hasta que la fuente preserve historico de cambios. |
+| `dim_empresa` | SCD Tipo 2 (forma) | Identica razon que `dim_pozo`; shape compatible con historizacion futura. |
+| `dim_area` | SCD Tipo 1 | Referencia estatica de areas productivas; los cambios de nombre sobreescriben el registro anterior. |
+| `dim_cuenca` | SCD Tipo 1 | Referencia estatica de cuencas; los cambios sobreescriben sin preservar historia. |
+| `dim_tipo_recurso` | SCD Tipo 1 | Catalogo de tipos de recurso con cardinalidad baja y sin requerimiento historico. |
+| `dim_fecha` | Estatica (sin SCD) | Dimension calendario generada deterministicamente; los atributos no cambian. |
+
 ## Diagrama estrella
 
 ```mermaid
