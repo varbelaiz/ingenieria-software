@@ -80,8 +80,11 @@ def _reset_quality_schemas(warehouse_connection: Any) -> None:
 
 
 def _load_invalid_quality_fixture(warehouse_connection: Any) -> None:
+    # dias_produccion fuera del rango valido (0-31): silver excluye volumenes
+    # negativos, asi que un prod_gas negativo nunca llegaria a gold; dias_produccion
+    # invalido si llega y dispara el check de rango, haciendo fallar el build.
     invalid_produccion_rows = [dict(row) for row in PRODUCCION_FIXTURE]
-    invalid_produccion_rows[0]["prod_gas"] = "-1.000"
+    invalid_produccion_rows[0]["dias_produccion"] = "999"
 
     load_bronze_table(
         warehouse_connection,
