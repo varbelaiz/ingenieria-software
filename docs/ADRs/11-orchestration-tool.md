@@ -55,5 +55,9 @@ driver fuerte a favor de Airflow; en ausencia de eso, Dagster minimiza el trabaj
 
 ## Confirmación
 
-Confirmado en `data_platform/orchestration/`: assets particionados con `RetryPolicy`
-(backoff exponencial) y un job end-to-end visible en la UI de Dagster (PR 6).
+Confirmado en `data_platform/orchestration/`: los modelos dbt se exponen como assets de
+Dagster vía `@dbt_assets` (`assets/transform.py`), conectados a los assets de bronze a
+través de un `DagsterDbtTranslator`. El grafo muestra `bronze -> silver -> gold` con cada
+modelo como nodo y los tests dbt como asset checks; particiones mensuales con backfill por
+fecha (`reprocess_period`), `RetryPolicy` con backoff en la extracción, y un asset job
+(`end_to_end_data_job`) con hook de alerta ante fallas de calidad.

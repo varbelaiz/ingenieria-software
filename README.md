@@ -92,6 +92,16 @@ el comando converge al mismo estado sin duplicar. El dashboard "Produccion de po
 convencionales" incluye produccion de gas por cuenca, petroleo por operadora, top pozos,
 evolucion mensual y la marca de calidad de los datos.
 
+## Plataforma de datos (Dagster)
+
+El pipeline corre como un grafo de assets de Dagster: los assets de bronze
+(`bronze_produccion_raw`, `bronze_pozos_raw`) alimentan los modelos dbt de silver y gold,
+expuestos como assets vía `dagster-dbt` (`silver/stg_produccion`, `gold/fct_produccion`,
+etc.), con los tests dbt como asset checks. Para actualizar los workflows, materializar la
+partición mensual desde la UI de Dagster (`http://localhost:3001`) o esperar al schedule
+`monthly_data_pipeline_schedule`. El manifest de dbt se genera en el build de la imagen
+(`Dockerfile.dagster`) y en CI antes de validar las Definitions.
+
 ## Testing y calidad
 
 ```bash
