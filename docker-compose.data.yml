@@ -65,6 +65,49 @@ services:
       - dagster_home:/opt/dagster/dagster_home
       - ./data_platform:/opt/dagster/app/data_platform
 
+  # Dedicated Postgres for Metabase's own application metadata. Kept separate from the
+  # warehouse so BI internal state never mixes with analytical data.
+  metabase-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${METABASE_DB_USER:-metabase}
+      POSTGRES_PASSWORD: ${METABASE_DB_PASSWORD:-metabase}
+      POSTGRES_DB: ${METABASE_DB_NAME:-metabase}
+    volumes:
+      - metabase_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${METABASE_DB_USER:-metabase}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # BI for non-technical users. Connects to the warehouse gold schema as a data source;
+  # that connection plus dashboards are applied reproducibly via data_platform.bi.provision.
+  metabase:
+    image: metabase/metabase:v0.62.1.7
+    ports:
+      - "${METABASE_PORT:-3002}:3000"
+    depends_on:
+      warehouse:
+        condition: service_healthy
+      metabase-db:
+        condition: service_healthy
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: metabase-db
+      MB_DB_PORT: "5432"
+      MB_DB_DBNAME: ${METABASE_DB_NAME:-metabase}
+      MB_DB_USER: ${METABASE_DB_USER:-metabase}
+      MB_DB_PASS: ${METABASE_DB_PASSWORD:-metabase}
+      MB_ENCRYPTION_SECRET_KEY: ${MB_ENCRYPTION_SECRET_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
 volumes:
   warehouse_data:
   dagster_home:
+  metabase_db_data:

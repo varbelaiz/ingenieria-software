@@ -1517,6 +1517,7 @@ data = [
     { name = "dbt-core" },
     { name = "dbt-postgres" },
     { name = "psycopg2-binary" },
+    { name = "requests" },
 ]
 dev = [
     { name = "black" },
@@ -1546,6 +1547,7 @@ data = [
     { name = "dbt-core", specifier = ">=1.8,<2.0" },
     { name = "dbt-postgres", specifier = ">=1.8,<2.0" },
     { name = "psycopg2-binary", specifier = ">=2.9,<3.0" },
+    { name = "requests", specifier = ">=2.31,<3.0" },
 ]
 dev = [
     { name = "black", specifier = ">=24.10.0,<25.0.0" },

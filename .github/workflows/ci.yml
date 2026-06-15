@@ -292,3 +292,6 @@ jobs:
 
       - name: Run data quality tests
         run: uv run --group data pytest tests/test_quality_persistence.py
+
+      - name: Validate Metabase card SQL against gold
+        run: uv run --group data pytest tests/test_metabase_cards_sql.py

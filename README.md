@@ -65,6 +65,33 @@ Acceso local: `http://localhost:9002` con usuario `datahub` y password `datahub`
 Para publicar metadata y revisar lineage/freshness, ver
 [`docs/governance.md`](docs/governance.md).
 
+## Plataforma de BI (Metabase)
+
+La capa gold se expone a usuarios no tecnicos con [Metabase](https://www.metabase.com/),
+conectado al esquema `gold` del warehouse. La decision se documenta en
+[ADR-18](docs/ADRs/18-bi-tool.md).
+
+```bash
+cp .env.data.example .env.data        # ajustar credenciales si hace falta
+docker compose --env-file .env.data -f docker-compose.data.yml up -d
+
+# Esperar a que Metabase este "healthy" (primer arranque tarda ~1 min)
+docker compose -f docker-compose.data.yml ps metabase
+
+# Aplicar conexion al warehouse + dashboards de forma idempotente
+uv run --group data python -m data_platform.bi.provision
+```
+
+Acceso: `http://localhost:3002` (usuario y contrasena = `METABASE_ADMIN_EMAIL` /
+`METABASE_ADMIN_PASSWORD` de `.env.data`).
+
+El provisioning es **reproducible y versionado**: las preguntas y el dashboard se definen
+en [`data_platform/bi/metabase_config.py`](data_platform/bi/metabase_config.py) y se
+aplican con [`data_platform/bi/provision.py`](data_platform/bi/provision.py). Re-ejecutar
+el comando converge al mismo estado sin duplicar. El dashboard "Produccion de pozos no
+convencionales" incluye produccion de gas por cuenca, petroleo por operadora, top pozos,
+evolucion mensual y la marca de calidad de los datos.
+
 ## Testing y calidad
 
 ```bash
