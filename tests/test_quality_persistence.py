@@ -27,6 +27,9 @@ from data_platform.extraction.bronze_loader import (  # noqa: E402
     BronzeLoad,
     load_bronze_table,
 )
+from data_platform.orchestration.assets.transform import (  # noqa: E402
+    build_dbt_build_args,
+)
 from data_platform.orchestration.dbt_project import (  # noqa: E402
     DBT_PROJECT_DIR,
 )
@@ -119,9 +122,7 @@ def test_dbt_build_persists_failure_rows_for_invalid_gold_data(
     dbt_executable = shutil.which("dbt") or "dbt"
     command = [
         dbt_executable,
-        "build",
-        "--select",
-        "silver gold",
+        *build_dbt_build_args(None),
         "--project-dir",
         str(DBT_PROJECT_DIR),
         "--profiles-dir",

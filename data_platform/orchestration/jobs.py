@@ -12,8 +12,6 @@ from dagster import (
 )
 from dagster._core.errors import DagsterInvalidPropertyError
 
-from data_platform.orchestration.assets.bronze import bronze_monthly_partitions
-
 ALERT_WEBHOOK_ENV = "DATA_QUALITY_ALERT_WEBHOOK_URL"
 
 
@@ -85,6 +83,5 @@ def data_quality_failure_hook(context: HookContext) -> None:
 end_to_end_data_job = define_asset_job(
     name="end_to_end_data_job",
     selection=AssetSelection.all(),
-    partitions_def=bronze_monthly_partitions,
     hooks={data_quality_failure_hook},
 )

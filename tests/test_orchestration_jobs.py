@@ -38,5 +38,9 @@ def test_asset_job_has_failure_hook() -> None:
 
 def test_schedule_targets_asset_job() -> None:
     """The monthly schedule must target the end_to_end_data_job."""
-    schedule = next(iter(defs.schedules))
+    schedule = next(
+        s for s in defs.schedules if s.name == "monthly_data_pipeline_schedule"
+    )
     assert schedule.job_name == "end_to_end_data_job"
+    assert schedule.cron_schedule == "0 3 1 * *"
+    assert schedule.execution_timezone == "America/Argentina/Buenos_Aires"
