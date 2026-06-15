@@ -13,6 +13,9 @@ from data_platform.extraction.bronze_loader import (  # noqa: E402
     load_bronze_table,
 )
 
+# Every test here writes to the real bronze tables; gate behind the opt-in marker.
+pytestmark = pytest.mark.warehouse_mutating
+
 
 def test_produccion_raw_has_source_and_technical_columns(
     warehouse_connection: Any,

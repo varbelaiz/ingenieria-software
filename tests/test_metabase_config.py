@@ -40,7 +40,8 @@ def test_graph_cards_define_axes_and_tables_do_not() -> None:
     for card in metabase_config.CARDS:
         settings = card.visualization_settings()
         if card.display == DISPLAY_TABLE:
-            assert not settings
+            assert "graph.dimensions" not in settings
+            assert "graph.metrics" not in settings
             assert not card.dimensions
             assert not card.metrics
         else:
@@ -48,6 +49,40 @@ def test_graph_cards_define_axes_and_tables_do_not() -> None:
             assert card.metrics, f"{card.name} is a chart without metrics"
             assert settings["graph.dimensions"] == list(card.dimensions)
             assert settings["graph.metrics"] == list(card.metrics)
+
+
+def test_secondary_axis_metrics_are_emitted_as_series_settings() -> None:
+    """Metrics pinned to the right axis surface in series_settings."""
+    card = metabase_config.get_card("Evolución mensual de producción total")
+    assert card.right_axis_metrics == ("prod_petroleo", "prod_agua")
+    series_settings = card.visualization_settings()["series_settings"]
+    assert series_settings == {
+        "prod_petroleo": {"axis": "right"},
+        "prod_agua": {"axis": "right"},
+    }
+
+
+def test_petroleo_card_buckets_minor_operadoras() -> None:
+    """The petróleo card groups the long tail of operadoras into 'Otras'."""
+    card = metabase_config.get_card("Producción de petróleo por operadora")
+    assert "'Otras'" in card.sql
+    assert "row_number() over" in card.sql
+
+
+def test_quality_card_has_conditional_formatting() -> None:
+    """The quality table colours its status column by PASS/ERROR."""
+    card = metabase_config.get_card("Marca de calidad de los datos")
+    rules = card.visualization_settings()["table.column_formatting"]
+    statuses = {rule["value"] for rule in rules}
+    assert statuses == {"PASS", "ERROR"}
+    for rule in rules:
+        assert rule["columns"] == ["status"]
+
+
+def test_exactly_one_card_is_full_width() -> None:
+    """Only the quality table spans the full dashboard width."""
+    full_width = [card.name for card in metabase_config.CARDS if card.full_width]
+    assert full_width == ["Marca de calidad de los datos"]
 
 
 def test_dashboard_references_only_existing_cards() -> None:

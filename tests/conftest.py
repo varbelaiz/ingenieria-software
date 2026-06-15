@@ -15,6 +15,40 @@ from app.alerts import AlertConfig, MockNotifier
 
 os.environ["API_KEY"] = "abcdef12345"
 
+# Tests marked ``warehouse_mutating`` DROP/seed the real warehouse (bronze/silver/gold)
+# and do not restore it. They are meant for an ephemeral CI warehouse, so they are
+# skipped unless this env var is set, to stop a stray local ``pytest`` from wiping a
+# warehouse that holds real data.
+RUN_WAREHOUSE_MUTATING_TESTS_ENV = "RUN_WAREHOUSE_MUTATING_TESTS"
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register the marker for warehouse-mutating integration tests."""
+    config.addinivalue_line(
+        "markers",
+        "warehouse_mutating: drops/seeds the real warehouse; skipped unless "
+        f"{RUN_WAREHOUSE_MUTATING_TESTS_ENV}=1",
+    )
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """Skip warehouse-mutating tests unless explicitly opted in via env var."""
+    del config
+    if os.getenv(RUN_WAREHOUSE_MUTATING_TESTS_ENV):
+        return
+    skip_marker = pytest.mark.skip(
+        reason=(
+            "warehouse-mutating test; set "
+            f"{RUN_WAREHOUSE_MUTATING_TESTS_ENV}=1 to run "
+            "(do not run against a warehouse with real data)"
+        )
+    )
+    for item in items:
+        if "warehouse_mutating" in item.keywords:
+            item.add_marker(skip_marker)
+
 
 @pytest.fixture
 def mock_alert_notifier() -> MockNotifier:
