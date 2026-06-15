@@ -123,10 +123,10 @@ def test_end_to_end_data_job_loads_bronze_before_dbt_build(
     assert events.index("load:pozos_raw") < events.index("dbt")
 
 
-def test_end_to_end_data_job_rematerializes_the_same_partition(
+def test_end_to_end_data_job_passes_partition_key_to_ops(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Re-running a backfill partition should target the same replaceable period."""
+    """Every op in the job should receive the active partition key."""
     loaded_rows_by_partition: dict[tuple[str, str], int] = {}
     reprocess_periods: list[str | None] = []
 

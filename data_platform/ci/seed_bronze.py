@@ -60,6 +60,21 @@ PRODUCCION_FIXTURE: list[dict[str, str]] = [
         "dias_produccion": "31",
         "fecha_data": "2024-01-31",
     },
+    {
+        "idempresa": "CAPSA",
+        "empresa": "CAPSA Petroleum",
+        "area": "Cañadon Seco",
+        "cuenca": "Golfo San Jorge",
+        "tipo_recurso": "CONVENCIONAL",
+        "anio": "2024",
+        "mes": "1",
+        "idpozo": "300001",
+        "prod_pet": "55.000",
+        "prod_gas": "12.000",
+        "prod_agua": "8.000",
+        "dias_produccion": "31",
+        "fecha_data": "2024-01-31",
+    },
 ]
 
 POZOS_FIXTURE: list[dict[str, str]] = [
@@ -83,6 +98,17 @@ POZOS_FIXTURE: list[dict[str, str]] = [
         "area": "El Mangrullo",
         "cuenca": "Neuquina",
         "tipo_recurso": "TIGHT",
+        "fecha_data": "2024-01-31",
+    },
+    {
+        "idpozo": "300001",
+        "sigla": "CAP.GSJ.CS-1",
+        "formprod": "CONV",
+        "idempresa": "CAPSA",
+        "empresa": "CAPSA Petroleum",
+        "area": "Cañadon Seco",
+        "cuenca": "Golfo San Jorge",
+        "tipo_recurso": "CONVENCIONAL",
         "fecha_data": "2024-01-31",
     },
 ]
