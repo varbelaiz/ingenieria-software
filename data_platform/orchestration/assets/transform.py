@@ -1,11 +1,14 @@
 """dbt assets (silver/gold) integrated as Dagster assets."""
 
 import json
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import Any
 
-from dagster import AssetKey
-from dagster_dbt import DagsterDbtTranslator
+from dagster import AssetExecutionContext, AssetKey
+from dagster_dbt import DagsterDbtTranslator, DbtCliResource, dbt_assets
+
+from data_platform.orchestration.assets.bronze import bronze_monthly_partitions
+from data_platform.orchestration.dbt_project import dbt_project
 
 
 class BronzeSourceTranslator(DagsterDbtTranslator):
@@ -31,3 +34,20 @@ def build_dbt_build_args(partition_key: str | None) -> list[str]:
     if partition_key is not None:
         args += ["--vars", json.dumps({"reprocess_period": partition_key})]
     return args
+
+
+_translator = BronzeSourceTranslator()
+
+
+@dbt_assets(
+    manifest=dbt_project.manifest_path,
+    partitions_def=bronze_monthly_partitions,
+    dagster_dbt_translator=_translator,
+)
+def dbt_models(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
+    """Materialize silver/gold: run freshness (fail-fast) then dbt build."""
+    # Stale sources block promotion before any transformation runs.
+    dbt.cli(["source", "freshness"], raise_on_error=True).wait()
+
+    partition_key = context.partition_key if context.has_partition_key else None
+    yield from dbt.cli(build_dbt_build_args(partition_key), context=context).stream()
