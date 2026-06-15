@@ -6,14 +6,14 @@ sources:
     schema: bronze
     tables:
       - name: produccion_raw
-        description: "Producción mensual de pozos no convencionales (placeholder — PR2)"
+        description: "Producción mensual cruda de pozos de gas y petróleo no convencional, cargada desde datos.gob.ar sin tipado de negocio."
         loaded_at_field: _loaded_at
         freshness:
           warn_after: {count: 35, period: day}
           error_after: {count: 60, period: day}
 
       - name: pozos_raw
-        description: "Listado de pozos por operadora (placeholder — PR2)"
+        description: "Listado crudo de pozos cargados por empresas operadoras, cargado desde datos.gob.ar sin tipado de negocio."
         loaded_at_field: _loaded_at
         freshness:
           warn_after: {count: 35, period: day}
