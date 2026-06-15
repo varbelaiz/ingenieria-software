@@ -40,33 +40,50 @@ pero conviene dejarlo explícito.
 
 Se mantiene el **Git Flow** ya establecido en Fase 1: las feature branches salen de
 `develop`, se mergean a `develop` (→ staging) mediante PR con CI requerido, y al final
-`develop` → `main` (→ prod). Branch protection sigue exigiendo CI en verde y PR
-obligatorio antes de mergear.
+`develop` → `main` (→ prod).
 
-Dentro de Fase 2, las branches cuyo trabajo depende de otra anterior se **encadenan
-(stack)** apuntando como base a esa branch — igual que en Fase 1 — para poder avanzar en
-paralelo sin esperar el merge. Las independientes salen directo de `develop`.
+**Todos los PR de la Fase 2 apuntan a `develop`** (ninguno apunta a otra feature
+branch). Esto es deliberado: la regla de protección que exige review obligatorio se aplica
+sobre la branch **destino** del PR, así que para que *todo* PR pase por review, todos
+deben aterrizar en una branch protegida (`develop`). Apuntar un PR a otra feature branch
+lo dejaría fuera de la regla **y** impediría pushear a esa branch mientras se desarrolla
+(la regla `pull_request` prohíbe el push directo a su destino) — los dos motivos por los
+que NO se usa branching apilado (stacked) acá.
+
+Las branches cuyo trabajo depende de otra anterior se **anidan localmente** (se crean a
+partir de la branch previa para tener su código), pero el PR sigue apuntando a `develop`.
+Se mergean **en orden, bottom-up**, con **merge commit** (no squash): así `develop` queda
+con los commits reales del padre y el diff del hijo se limpia solo al re-basearse. Con
+squash habría que `rebase --onto` + force-push en cada paso.
 
 ```
-develop ──●
-           \
-            feature/data-platform-scaffolding (PR 1 → develop)
-             \
-              feature/data-extraction-bronze (PR 2 → ...scaffolding)
-               \
-                feature/silver-transformations (PR 3 → ...bronze)
-                 \
-                  feature/gold-star-schema (PR 4 → ...silver)
-                   \
-                    feature/data-quality (PR 5 → ...gold)
-                     \
-                      feature/orchestration-hardening (PR 6 → ...quality)
+develop ──●  (todas las feature salen de aca; todos los PR apuntan aca)
+           │
+           ├─ feature/data-platform-scaffolding   PR 1 → develop   (incluye bronze)
+           ├─ feature/silver-transformations      PR 2 → develop   depende de PR1
+           ├─ feature/gold-star-schema            PR 3 → develop   depende de PR2
+           ├─ feature/data-quality                PR 4 → develop   depende de PR3
+           ├─ feature/orchestration-hardening     PR 5 → develop   depende de PR4
+           ├─ feature/governance-datahub          PR 6 → develop   depende de gold (PR3)
+           ├─ feature/bi-metabase                 PR 7 → develop   depende de gold (PR3)
+           └─ feature/docs-runbooks               PR 8 → develop   al final
 
-  (paralelas, salen de develop una vez que gold existe)
-            feature/governance-datahub (PR 7 → develop)
-            feature/bi-metabase        (PR 8 → develop)
-            feature/docs-runbooks      (PR 9 → develop)
+Orden de merge: bottom-up segun dependencia (PR1 → PR2 → PR3 → ...), con merge commit.
+"depende de" = se anida local sobre esa branch, pero el PR apunta a develop igual.
 ```
+
+> **Nota:** en la versión original de este plan bronze era un PR aparte apilado sobre
+> scaffolding. Quedó integrado en `feature/data-platform-scaffolding` (vía su propio PR de
+> review), así que viaja junto a scaffolding en el PR 1. Por eso la numeración de PR de
+> abajo se mantiene, pero el branching real es plano contra `develop`.
+
+### Protección de branches (ruleset)
+
+Un único ruleset de GitHub protege **`main` y `develop`** (no `~ALL`) con: PR obligatorio
+con **≥1 review aprobado**, **status checks requeridos** (`lint` + `test`), bloqueo de
+**deletion** y **non-fast-forward**. Las `feature/*` quedan **libres** para pushear y
+borrar (son solo origen de PR, nunca destino), lo que evita bloquear a los colaboradores
+en sus propias branches.
 
 Convención de nombres de branch: `feature/<nombre>`. Convención de commits: Conventional
 Commits (`feat:`, `chore:`, `docs:`, `test:`, `ci:`), igual que Fase 1.
@@ -129,8 +146,8 @@ existente de la API).
 
 ## PR 2: `feature/data-extraction-bronze`
 
-**Branch:** `feature/data-extraction-bronze` ← `feature/data-platform-scaffolding`
-**PR target:** `feature/data-platform-scaffolding`
+**Branch:** `feature/data-extraction-bronze` → integrada en `feature/data-platform-scaffolding`
+**PR target:** se revisó en su propio PR y quedó dentro de scaffolding; llega a `develop` junto con PR 1
 **Descripción:** Extracción de las dos fuentes de datos.gob.ar hacia la capa **bronze**,
 idempotente y particionada.
 
@@ -166,8 +183,8 @@ idempotente y particionada.
 
 ## PR 3: `feature/silver-transformations`
 
-**Branch:** `feature/silver-transformations` ← `feature/data-extraction-bronze`
-**PR target:** `feature/data-extraction-bronze`
+**Branch:** `feature/silver-transformations` (anidada local sobre bronze/scaffolding)
+**PR target:** `develop`
 **Descripción:** Capa **silver**: limpieza, tipado, deduplicación y conformado de las
 dos fuentes. Se define el tipo de carga.
 
@@ -196,8 +213,8 @@ dos fuentes. Se define el tipo de carga.
 
 ## PR 4: `feature/gold-star-schema`
 
-**Branch:** `feature/gold-star-schema` ← `feature/silver-transformations`
-**PR target:** `feature/silver-transformations`
+**Branch:** `feature/gold-star-schema` (anidada local sobre silver)
+**PR target:** `develop`
 **Descripción:** Capa **gold** con el modelo estrella: dimensiones, fact y documentación
 del modelo de datos.
 
@@ -230,8 +247,8 @@ del modelo de datos.
 
 ## PR 5: `feature/data-quality`
 
-**Branch:** `feature/data-quality` ← `feature/gold-star-schema`
-**PR target:** `feature/gold-star-schema`
+**Branch:** `feature/data-quality` (anidada local sobre gold)
+**PR target:** `develop`
 **Descripción:** Checks de calidad persistidos con ≥3 dimensiones y consecuencia
 operativa al fallar.
 
@@ -269,8 +286,8 @@ operativa al fallar.
 
 ## PR 6: `feature/orchestration-hardening`
 
-**Branch:** `feature/orchestration-hardening` ← `feature/data-quality`
-**PR target:** `feature/data-quality`
+**Branch:** `feature/orchestration-hardening` (anidada local sobre data-quality)
+**PR target:** `develop`
 **Descripción:** Endurece los DAGs: idempotencia, retries con backoff, observabilidad y
 backfill verificable. Conecta extracción → dbt de punta a punta.
 
@@ -956,24 +973,25 @@ que la justificación quede atada a la implementación que la confirma.
 
 ## Mapa de dependencias
 
+> Todos los PR apuntan a `develop`. La columna "anida sobre" indica de qué branch se crea
+> localmente para tener su código; el merge es bottom-up (con merge commit) en ese orden.
+
 ```
-develop
+develop  ◄── todos los PR apuntan aca
   │
-  ├─► PR1: data-platform-scaffolding          (base: develop)
-  │     └─► PR2: data-extraction-bronze       (base: PR1)
-  │           └─► PR3: silver-transformations  (base: PR2)
-  │                 └─► PR4: gold-star-schema  (base: PR3)
-  │                       └─► PR5: data-quality (base: PR4)
-  │                             └─► PR6: orchestration-hardening (base: PR5)
-  │
-  ├─► PR7: governance-datahub   (base: develop — inicia tras merge de PR4 mínimo)
-  ├─► PR8: bi-metabase          (base: develop — inicia tras merge de PR4 mínimo)
-  └─► PR9: docs-runbooks        (base: develop — inicia al final, antes de entrega)
+  PR1: data-platform-scaffolding (+bronze)   anida sobre: develop      merge 1º
+  PR3: silver-transformations                anida sobre: PR1          merge 2º
+  PR4: gold-star-schema                      anida sobre: PR3          merge 3º
+  PR5: data-quality                          anida sobre: PR4          merge 4º
+  PR6: orchestration-hardening               anida sobre: PR5          merge 5º
+  PR7: governance-datahub                    anida sobre: develop      tras gold (PR4)
+  PR8: bi-metabase                           anida sobre: develop      tras gold (PR4)
+  PR9: docs-runbooks                         anida sobre: develop      al final
 ```
 
 **Regla de paralelismo:** PR7, PR8 y PR9 pueden desarrollarse en paralelo a la cadena
 principal una vez que el modelo estrella (PR4) esté mergeado a develop. Antes de PR4,
-no hay tablas gold que consumir.
+no hay tablas gold que consumir. (PR2/bronze quedó integrado en PR1.)
 
 ---
 
@@ -1428,17 +1446,21 @@ data_platform/transform/models/gold/semantic/   # (bonus) vistas/métricas dbt
 
 ## Tabla de seguimiento de PRs
 
-| PR | Branch | Base | Estado | CI | Done |
-|----|--------|------|--------|-----|------|
-| 1 | `feature/data-platform-scaffolding` | develop | 🟡 en revisión | ⏳ push pendiente | — |
-| 2 | `feature/data-extraction-bronze` | PR1 | ⬜ pendiente | — | — |
-| 3 | `feature/silver-transformations` | PR2 | ⬜ pendiente | — | — |
-| 4 | `feature/gold-star-schema` | PR3 | ⬜ pendiente | — | — |
-| 5 | `feature/data-quality` | PR4 | ⬜ pendiente | — | — |
-| 6 | `feature/orchestration-hardening` | PR5 | ⬜ pendiente | — | — |
-| 7 | `feature/governance-datahub` | develop (post-PR4) | ⬜ pendiente | — | — |
-| 8 | `feature/bi-metabase` | develop (post-PR4) | ⬜ pendiente | — | — |
-| 9 | `feature/docs-runbooks` | develop (post-PR6/7/8) | ⬜ pendiente | — | — |
+> **Target de todos:** `develop`. La columna "anida sobre" es la branch local de la que se
+> crea; el orden de merge es bottom-up. PR# es el número real en GitHub.
+
+| Plan | PR# | Branch | Anida sobre | Estado |
+|------|-----|--------|-------------|--------|
+| 1 | #32 | `feature/data-platform-scaffolding` (+bronze) | develop | 🟡 en revisión |
+| 3 | #28 | `feature/silver-transformations` | PR1 | 🟡 en revisión (✅ approved) |
+| 4 | #30 | `feature/gold-star-schema` | PR3 | 🟡 en revisión |
+| 5 | #31 | `feature/data-quality` | PR4 | 🟡 en revisión |
+| 6 | — | `feature/orchestration-hardening` | PR5 | ⬜ pendiente |
+| 7 | — | `feature/governance-datahub` | develop (post-PR4) | ⬜ pendiente |
+| 8 | — | `feature/bi-metabase` | develop (post-PR4) | ⬜ pendiente |
+| 9 | — | `feature/docs-runbooks` | develop (post-PR6/7/8) | ⬜ pendiente |
+
+(PR2/bronze: integrado en PR1, ya revisado vía su PR #27.)
 
 **Estados:** ⬜ pendiente · 🔵 en progreso · 🟡 en revisión · ✅ mergeado
 

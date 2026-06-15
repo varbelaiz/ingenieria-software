@@ -54,3 +54,31 @@ def test_load_bronze_table_replaces_existing_partition(
 
     assert row_count == 1
     assert only_company == "PAMPA"
+
+
+def test_load_bronze_table_same_rows_twice_is_idempotent(
+    warehouse_connection: Any,
+) -> None:
+    """Loading the exact same rows a second time keeps the row count unchanged."""
+    bronze_load = BronzeLoad(
+        table_name="produccion_raw",
+        load_period="2026-05",
+        source_url="https://example.test/produccion.csv",
+        resource_id="resource-produccion",
+        rows=[
+            {"idempresa": "YSUR", "anio": "2016", "mes": "1", "idpozo": "135204"},
+            {"idempresa": "YPF", "anio": "2016", "mes": "1", "idpozo": "155584"},
+        ],
+    )
+
+    load_bronze_table(warehouse_connection, bronze_load)
+    load_bronze_table(warehouse_connection, bronze_load)
+
+    with warehouse_connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) FROM bronze.produccion_raw WHERE _load_period = %s",
+            ("2026-05",),
+        )
+        (row_count,) = cursor.fetchone()
+
+    assert row_count == 2

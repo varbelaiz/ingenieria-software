@@ -32,6 +32,11 @@ services:
       WAREHOUSE_USER: ${WAREHOUSE_USER:-warehouse}
       WAREHOUSE_PASSWORD: ${WAREHOUSE_PASSWORD:-warehouse}
       WAREHOUSE_DB: ${WAREHOUSE_DB:-warehouse}
+      DBT_WAREHOUSE_HOST: warehouse
+      DBT_WAREHOUSE_PORT: "5432"
+      DBT_WAREHOUSE_USER: ${WAREHOUSE_USER:-warehouse}
+      DBT_WAREHOUSE_PASSWORD: ${WAREHOUSE_PASSWORD:-warehouse}
+      DBT_WAREHOUSE_DB: ${WAREHOUSE_DB:-warehouse}
     volumes:
       - dagster_home:/opt/dagster/dagster_home
       - ./data_platform:/opt/dagster/app/data_platform
@@ -51,6 +56,11 @@ services:
       WAREHOUSE_USER: ${WAREHOUSE_USER:-warehouse}
       WAREHOUSE_PASSWORD: ${WAREHOUSE_PASSWORD:-warehouse}
       WAREHOUSE_DB: ${WAREHOUSE_DB:-warehouse}
+      DBT_WAREHOUSE_HOST: warehouse
+      DBT_WAREHOUSE_PORT: "5432"
+      DBT_WAREHOUSE_USER: ${WAREHOUSE_USER:-warehouse}
+      DBT_WAREHOUSE_PASSWORD: ${WAREHOUSE_PASSWORD:-warehouse}
+      DBT_WAREHOUSE_DB: ${WAREHOUSE_DB:-warehouse}
     volumes:
       - dagster_home:/opt/dagster/dagster_home
       - ./data_platform:/opt/dagster/app/data_platform
