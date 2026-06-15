@@ -12,6 +12,8 @@ from typing import Any
 import pytest
 
 psycopg2 = pytest.importorskip("psycopg2")
+from psycopg2 import sql  # noqa: E402
+
 pytest.importorskip("dagster")
 
 from dagster import build_hook_context  # noqa: E402
@@ -142,9 +144,9 @@ def test_dbt_build_persists_failure_rows_for_invalid_gold_data(
         persisted_failure_rows = 0
         for table_name in failure_tables:
             cursor.execute(
-                psycopg2.sql.SQL("SELECT count(*) FROM {}.{}").format(
-                    psycopg2.sql.Identifier("dbt_test_failures"),
-                    psycopg2.sql.Identifier(table_name),
+                sql.SQL("SELECT count(*) FROM {}.{}").format(
+                    sql.Identifier("dbt_test_failures"),
+                    sql.Identifier(table_name),
                 )
             )
             persisted_failure_rows += int(cursor.fetchone()[0])
@@ -162,6 +164,41 @@ def test_build_dbt_build_command_uses_expected_directories() -> None:
         str(DBT_PROJECT_DIR),
         "--profiles-dir",
         str(DBT_PROFILES_DIR),
+    ]
+
+
+def test_build_dbt_build_command_can_scope_reprocess_period() -> None:
+    """Partitioned backfills should pass the selected month through dbt vars."""
+    command = build_dbt_build_command(reprocess_period="2026-05-01")
+
+    assert command[-2:] == [
+        "--vars",
+        '{"reprocess_period": "2026-05-01"}',
+    ]
+
+
+def test_run_dbt_build_passes_reprocess_period_to_runner() -> None:
+    """run_dbt_build should build a scoped command for partitioned backfills."""
+    captured_command: list[str] = []
+
+    def successful_runner(
+        command: list[str],
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]:
+        del kwargs
+        captured_command.extend(command)
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout="dbt ok",
+            stderr="",
+        )
+
+    run_dbt_build(reprocess_period="2026-05-01", runner=successful_runner)
+
+    assert captured_command[-2:] == [
+        "--vars",
+        '{"reprocess_period": "2026-05-01"}',
     ]
 
 

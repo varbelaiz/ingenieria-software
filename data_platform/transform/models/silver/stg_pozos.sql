@@ -20,9 +20,9 @@ deduped as (
         nullif(trim(formprod), '')          as formacion_productiva,
         upper(trim(idempresa))              as id_empresa,
         nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['empresa', 'operador'], 'idempresa') }}), '') as empresa,
-        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['area', 'areapermisoconcesion'], "'SIN_AREA'") }}), '') as area,
-        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['cuenca'], "'SIN_CUENCA'") }}), '') as cuenca,
-        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['tipo_recurso', 'tiporecurso', 'recurso'], 'formprod') }}), '') as tipo_recurso,
+        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['area', 'areapermisoconcesion'], 'NULL') }}), '') as area,
+        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['cuenca'], 'NULL') }}), '') as cuenca,
+        nullif(trim({{ bronze_text_column(source('bronze', 'pozos_raw'), ['tipo_recurso', 'tiporecurso', 'recurso'], 'NULL') }}), '') as tipo_recurso,
         _loaded_at,
         row_number() over (
             partition by nullif(trim(idpozo), '')::bigint
