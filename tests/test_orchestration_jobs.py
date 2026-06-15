@@ -1,9 +1,16 @@
 """Tests for the asset-based orchestration wiring."""
 
-from dagster import AssetKey
+# pylint: disable=wrong-import-position
 
-from data_platform.orchestration import defs
-from data_platform.orchestration.jobs import (
+import pytest
+
+pytest.importorskip("dagster")
+pytest.importorskip("dagster_dbt")
+
+from dagster import AssetKey  # noqa: E402
+
+from data_platform.orchestration import defs  # noqa: E402
+from data_platform.orchestration.jobs import (  # noqa: E402
     data_quality_failure_hook,
     end_to_end_data_job,
 )

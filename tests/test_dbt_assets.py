@@ -1,10 +1,17 @@
 """Tests for dbt asset translator and argument builder."""
 
+# pylint: disable=wrong-import-position
+
 import json
 
-from dagster import AssetKey
+import pytest
 
-from data_platform.orchestration.assets.transform import (
+pytest.importorskip("dagster")
+pytest.importorskip("dagster_dbt")
+
+from dagster import AssetKey  # noqa: E402
+
+from data_platform.orchestration.assets.transform import (  # noqa: E402
     BronzeSourceTranslator,
     build_dbt_build_args,
 )
