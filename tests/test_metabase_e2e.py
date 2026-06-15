@@ -84,6 +84,12 @@ def test_petroleo_card_is_not_truncated(
     with warehouse_connection.cursor() as cursor:
         cursor.execute("select max(periodo) from gold.fct_produccion")
         (warehouse_max,) = cursor.fetchone()
+        cursor.execute(
+            "select count(distinct e.empresa) "
+            "from gold.fct_produccion as f "
+            "join gold.dim_empresa as e on f.empresa_key = e.empresa_key"
+        )
+        (distinct_operadoras,) = cursor.fetchone()
 
     card = _card_by_name(metabase_client, PETROLEO_CARD)
     cols, rows = _run_card(metabase_client, int(card["id"]))
@@ -95,10 +101,15 @@ def test_petroleo_card_is_not_truncated(
     card_max_periodo = max(str(row[periodo_idx])[:7] for row in rows)
     assert card_max_periodo == warehouse_max.strftime("%Y-%m")
 
+    # The card keeps the top 8 operadoras and buckets the rest into 'Otras' — but
+    # only when there are more than 8 (e.g. real data, not the small CI seed).
     operadoras = {row[operadora_idx] for row in rows}
-    assert "Otras" in operadoras
-    # Top 8 operadoras plus the 'Otras' bucket.
-    assert len(operadoras) == 9
+    if distinct_operadoras > 8:
+        assert "Otras" in operadoras
+        assert len(operadoras) == 9
+    else:
+        assert "Otras" not in operadoras
+        assert len(operadoras) == distinct_operadoras
     assert len(rows) < 100_000
 
 
