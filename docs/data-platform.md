@@ -16,11 +16,11 @@ Docker Compose, CI con GitHub Actions y Git Flow.
 
 ```
 datos.gob.ar                         ┌───────────── Dagster (orquestación) ─────────────┐
-  ├─ producción (CSV) ──┐            │  end_to_end_data_job   (schedule mensual)        │
-  └─ pozos (CSV) ───────┤            │  data_quality_job      (gate de calidad)         │
+  ├─ producción (CSV) ──┐            │  end_to_end_data_job  (grafo de assets, schedule │
+  └─ pozos (CSV) ───────┤            │  mensual): assets de bronze + assets dbt         │
                         ▼            └──────────────────────────────────────────────────┘
               extraction/ (HTTP + retry)            │
-                        │  load_bronze_*            │ dbt build --select silver gold
+                        │  bronze_*                 │ @dbt_assets: freshness + dbt build
                         ▼                           ▼
    ┌──────────────────── PostgreSQL warehouse (:5433) ────────────────────┐
    │  bronze   landing crudo, particionado mensual, idempotente           │
@@ -42,7 +42,7 @@ El diagrama interactivo de la arquitectura de datos está en
 
 | Capa | Herramienta | ADR |
 |------|-------------|-----|
-| Orquestación | **Dagster** (assets + jobs + schedule) | [ADR-11](ADRs/11-orchestration-tool.md) |
+| Orquestación | **Dagster** (assets dbt granulares + asset job + schedule) | [ADR-11](ADRs/11-orchestration-tool.md), [ADR-19](ADRs/19-dbt-asset-integration.md) |
 | Warehouse | **PostgreSQL** | [ADR-12](ADRs/12-warehouse-engine.md) |
 | Medallion / transformación | **dbt (dbt-postgres)** | [ADR-13](ADRs/13-medallion-layering.md) |
 | Tipo de carga | **incremental merge / upsert** | [ADR-14](ADRs/14-load-type.md) |
@@ -71,20 +71,27 @@ Las tres capas viven en esquemas homónimos de la misma base Postgres
 
 ## Orquestación
 
-Dagster define dos jobs y un schedule (`data_platform/orchestration/`):
+Dagster expone el pipeline como un **grafo de assets** con un solo asset job y un schedule
+(`data_platform/orchestration/`):
 
-- **`end_to_end_data_job`** — carga bronze (producción + pozos) y luego corre
-  `dbt build --select silver gold` (modelos + tests). Está particionado por mes; reprocesar
-  una fecha = re-materializar su partición.
-- **`data_quality_job`** — corre `dbt source freshness` y `dbt build` como gate de calidad
-  aislado.
-- **`monthly_data_pipeline_schedule`** — dispara `end_to_end_data_job` con cron
-  `0 3 1 * *` (TZ `America/Argentina/Buenos_Aires`) sobre la última partición mensual
-  cerrada.
+- **Assets de bronze** (`assets/bronze.py`) — cargan bronze (producción + pozos) desde
+  `extraction/`. Particionados por mes; reemplazan la partición antes de insertar
+  (idempotentes) y usan `RetryPolicy(max_retries=3, delay=30, backoff=Backoff.EXPONENTIAL)`
+  para tolerar fallos transitorios (locks del warehouse, timeouts HTTP a datos.gob.ar).
+- **Assets dbt** (`assets/transform.py`) — los modelos silver y gold se exponen como
+  assets granulares vía `@dbt_assets` (uno por modelo dbt), conectados a los assets de
+  bronze con un `DagsterDbtTranslator`. Al materializarse corren `dbt source freshness`
+  (fail-fast: una fuente vieja corta antes de transformar) y luego `dbt build` con
+  `--vars reprocess_period=<partición>`; los tests dbt aparecen como **asset checks**.
+  El detalle de esta integración está en [ADR-19](ADRs/19-dbt-asset-integration.md).
+- **`end_to_end_data_job`** — asset job sobre `AssetSelection.all()` (bronze + dbt) con un
+  `failure_hook` que emite la alerta de calidad. Reprocesar una fecha = re-materializar su
+  partición.
+- **`monthly_data_pipeline_schedule`** — dispara el job con cron `0 3 1 * *`
+  (TZ `America/Argentina/Buenos_Aires`) sobre la última partición mensual cerrada.
 
-Todos los ops usan `RetryPolicy(max_retries=3, delay=30, backoff=Backoff.EXPONENTIAL)`
-para tolerar fallos transitorios (locks del warehouse, timeouts HTTP a datos.gob.ar). La
-UI de Dagster (`http://localhost:3001`) da logs y status por corrida.
+La UI de Dagster (`http://localhost:3001`) muestra el grafo `bronze → silver → gold` con
+cada modelo como nodo, con logs y status por corrida.
 
 ## Calidad de datos
 
@@ -95,17 +102,21 @@ UI de Dagster (`http://localhost:3001`) da logs y status por corrida.
 - La vista `gold.quality_marks` resume el último estado de cada check (`status` `PASS` /
   `ERROR`, `failed_rows`, `checked_at`): es la marca de calidad visible para BI y gobierno.
 - Usar `dbt build` (no `run`) hace que un test fallido **corte la corrida y bloquee la
-  promoción** a gold. Un `failure_hook` de Dagster emite una alerta estructurada (y la
-  reenvía a un webhook si `DATA_QUALITY_ALERT_WEBHOOK_URL` está configurada).
+  promoción** a gold; los tests se ven como **asset checks** en Dagster. Antes de
+  transformar, el asset dbt corre `dbt source freshness` (fail-fast). El `failure_hook` del
+  asset job emite una alerta estructurada (y la reenvía a un webhook si
+  `DATA_QUALITY_ALERT_WEBHOOK_URL` está configurada).
 
 ## Gobierno y BI
 
 - **Gobierno (DataHub):** lineage a nivel tabla (`bronze → silver → gold`), freshness y
   workflows visibles. Levantado, recetas de ingesta y verificación en
   [Gobierno de datos](governance.md).
-- **BI (Metabase):** dashboards sobre el esquema `gold` para usuarios no técnicos. La
-  conexión al warehouse y los dashboards se aplican de forma reproducible con
-  `data_platform/bi/provision.py` (ver el [README](../README.md#bi-con-metabase)).
+- **BI (Metabase):** dashboard sobre el esquema `gold` para usuarios no técnicos, con KPIs
+  (scalars), una card por tipo de recurso (gas / petróleo / agua) y un filtro de rango de
+  fechas ("Período") sobre `fct_produccion`. La conexión al warehouse y el dashboard se
+  aplican de forma reproducible con `data_platform/bi/provision.py` (ver el
+  [README](../README.md#bi-con-metabase)).
 
 ## Cómo correr y actualizar los workflows
 
@@ -157,4 +168,4 @@ siguen en AWS.
 - [Gobierno de datos](governance.md) — DataHub: ingesta, lineage y freshness.
 - [Runbook de data engineer](runbooks/data-engineer.md) — backfill y reproceso histórico.
 - [Runbook de BI user](runbooks/bi-user.md) — validar frescura y calidad antes de publicar.
-- ADRs [11](ADRs/11-orchestration-tool.md)–[18](ADRs/18-bi-tool.md) — decisiones del stack de datos.
+- ADRs [11](ADRs/11-orchestration-tool.md)–[19](ADRs/19-dbt-asset-integration.md) — decisiones del stack de datos.

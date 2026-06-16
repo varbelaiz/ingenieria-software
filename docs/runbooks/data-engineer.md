@@ -1,8 +1,8 @@
 # Runbook de data engineer
 
-**Role:** Data Engineer
-**Responsibilities:** Pipeline operation, partition backfills, incident response for extraction and transformation failures.
-**Owner:** Data Engineering team.
+**Rol:** Data Engineer
+**Responsabilidades:** Operación del pipeline, backfills de particiones, respuesta a incidentes en fallas de extracción y transformación.
+**Dueño:** Equipo de Data Engineering.
 
 ## Reprocesar una particion historica
 

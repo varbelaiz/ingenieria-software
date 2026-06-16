@@ -1,8 +1,8 @@
 # Runbook de BI user
 
-**Role:** BI User / Data Owner
-**Responsibilities:** Exploration of gold data in Metabase, validation of freshness and quality before publishing, escalation of stale or failing data to data engineering.
-**Owner:** Business / Data Owner team.
+**Rol:** Usuario de BI / Data Owner
+**Responsabilidades:** Exploracion de datos gold en Metabase, validacion de frescura y calidad antes de publicar, escalamiento de datos viejos o con fallas al equipo de data engineering.
+**Dueño:** Equipo de Negocio / Data Owner.
 
 ## Validar frescura y calidad antes de publicar
 
@@ -31,7 +31,9 @@ docker compose -f docker-compose.data.yml up --build
 
 1. **Abrir el dashboard en Metabase.** Entrar a `http://localhost:3002` y abrir el
    dashboard "Produccion de pozos no convencionales" (provisto por
-   `data_platform/bi/provision.py`). Identificar el periodo que se va a presentar.
+   `data_platform/bi/provision.py`). Acotar el filtro de rango de fechas "Periodo" al
+   periodo que se va a presentar; los KPIs y la card por tipo de recurso (gas, petroleo,
+   agua) se recalculan sobre ese rango.
 
 2. **Revisar la marca de calidad.** La vista `gold.quality_marks` resume el ultimo estado
    de cada check. Confirmar que ningun check quedo en `ERROR`:

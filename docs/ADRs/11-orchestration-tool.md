@@ -66,3 +66,6 @@ través de un `DagsterDbtTranslator`. El grafo muestra `bronze -> silver -> gold
 modelo como nodo y los tests dbt como asset checks; particiones mensuales con backfill por
 fecha (`reprocess_period`), `RetryPolicy` con backoff en la extracción, y un asset job
 (`end_to_end_data_job`) con hook de alerta ante fallas de calidad.
+
+El detalle de la integración dbt ↔ Dagster (assets granulares vía `@dbt_assets` vs un op
+único de `dbt build`) se documenta en [ADR-19](19-dbt-asset-integration.md).
