@@ -34,9 +34,13 @@ typed as (
         nullif(trim(idpozo), '')::bigint        as id_pozo,
         upper(trim(idempresa))                  as id_empresa,
         nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['empresa', 'operador'], 'idempresa') }}), '') as empresa,
-        nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['area', 'areapermisoconcesion'], 'NULL') }}), '') as area,
-        nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['cuenca'], 'NULL') }}), '') as cuenca,
-        nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['tipo_recurso', 'tiporecurso', 'recurso'], 'NULL') }}), '') as tipo_recurso,
+        -- En la fuente real las columnas planas `area`/`tipo_recurso` existen pero
+        -- vienen vacías; los valores poblados viven en `areayacimiento` y
+        -- `tipo_de_recurso`. Se priorizan esas y se cae a un unknown member
+        -- ('SIN DATO') para los gaps genuinos, evitando NULLs en las dimensiones.
+        coalesce(nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['areayacimiento', 'areapermisoconcesion', 'area'], 'NULL') }}), ''), 'SIN DATO') as area,
+        coalesce(nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['cuenca'], 'NULL') }}), ''), 'SIN DATO') as cuenca,
+        coalesce(nullif(trim({{ bronze_text_column(source('bronze', 'produccion_raw'), ['tipo_de_recurso', 'sub_tipo_recurso', 'tipo_recurso', 'tiporecurso', 'recurso'], 'NULL') }}), ''), 'SIN DATO') as tipo_recurso,
         make_date(anio::int, mes::int, 1)       as periodo,
         nullif(trim(prod_gas), '')::numeric     as prod_gas,
         nullif(trim(prod_pet), '')::numeric     as prod_petroleo,
@@ -74,3 +78,9 @@ select
     _loaded_at
 from deduped
 where _row_num = 1
+  -- Silver excluye filas con volumen negativo: producción negativa es físicamente
+  -- inválida para el grano (pozo x mes). La fuente publica algunos negativos como
+  -- ajustes retroactivos; se descartan acá para no propagar medidas inválidas a gold.
+  and coalesce(prod_gas, 0) >= 0
+  and coalesce(prod_petroleo, 0) >= 0
+  and coalesce(prod_agua, 0) >= 0

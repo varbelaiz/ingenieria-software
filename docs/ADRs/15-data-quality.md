@@ -59,4 +59,6 @@ La implementacion adoptada combina tres piezas:
 
 Confirmado en `data_platform/transform/`: tests declarativos ampliados, `store_failures`
 habilitado y vista `gold.quality_marks`. Confirmado en `data_platform/orchestration/`:
-job Dagster `data_quality_job` que ejecuta `dbt build` y falla ante un exit code no cero.
+los tests dbt corren dentro de `@dbt_assets` (`dbt build`) y se exponen como asset checks;
+un test de severidad `error` corta la materializacion de gold, y el
+`data_quality_failure_hook` sobre `end_to_end_data_job` emite la alerta.

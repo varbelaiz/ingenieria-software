@@ -16,3 +16,6 @@ RUN dagster-webserver --help >/dev/null && dagster-daemon --help >/dev/null
 
 COPY workspace.yaml ./
 COPY data_platform/ ./data_platform/
+# Generate the dbt manifest at build time so @dbt_assets loads without a DB at runtime.
+RUN dbt deps --project-dir data_platform/transform --profiles-dir data_platform/transform \
+ && dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform
