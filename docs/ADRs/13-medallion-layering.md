@@ -1,4 +1,4 @@
-# ADR-12: Capas medallion para la plataforma de datos
+# ADR-13: Capas medallion para la plataforma de datos
 
 ```
 status: Aceptado

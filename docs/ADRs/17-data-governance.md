@@ -1,4 +1,4 @@
-# ADR-16: Plataforma de gobierno de datos
+# ADR-17: Plataforma de gobierno de datos
 
 ```
 status: Aceptado

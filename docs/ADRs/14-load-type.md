@@ -1,4 +1,4 @@
-# ADR-13: Tipo de carga (full vs incremental vs merge/upsert)
+# ADR-14: Tipo de carga (full vs incremental vs merge/upsert)
 
 ```
 status: Aceptado

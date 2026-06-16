@@ -1,4 +1,4 @@
-# ADR-15: Calidad de datos persistida en gold con dbt
+# ADR-16: Calidad de datos persistida en gold con dbt
 
 ```
 status: Aceptado

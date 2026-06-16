@@ -1,4 +1,4 @@
-# ADR-14: Modelo dimensional para la capa gold
+# ADR-15: Modelo dimensional para la capa gold
 
 ```
 status: Aceptado

@@ -43,12 +43,12 @@ El diagrama interactivo de la arquitectura de datos está en
 | Capa | Herramienta | ADR |
 |------|-------------|-----|
 | Orquestación | **Dagster** (assets + jobs + schedule) | [ADR-11](ADRs/11-orchestration-tool.md) |
-| Warehouse | **PostgreSQL** | [ADR-17](ADRs/17-warehouse-engine.md) |
-| Medallion / transformación | **dbt (dbt-postgres)** | [ADR-12](ADRs/12-medallion-layering.md) |
-| Tipo de carga | **incremental merge / upsert** | [ADR-13](ADRs/13-load-type.md) |
-| Modelo dimensional | **estrella** (dims + fact) | [ADR-14](ADRs/14-dimensional-model.md) |
-| Calidad | **dbt tests + dbt-expectations + `store_failures`** | [ADR-15](ADRs/15-data-quality.md) |
-| Gobierno | **DataHub** | [ADR-16](ADRs/16-data-governance.md) |
+| Warehouse | **PostgreSQL** | [ADR-12](ADRs/12-warehouse-engine.md) |
+| Medallion / transformación | **dbt (dbt-postgres)** | [ADR-13](ADRs/13-medallion-layering.md) |
+| Tipo de carga | **incremental merge / upsert** | [ADR-14](ADRs/14-load-type.md) |
+| Modelo dimensional | **estrella** (dims + fact) | [ADR-15](ADRs/15-dimensional-model.md) |
+| Calidad | **dbt tests + dbt-expectations + `store_failures`** | [ADR-16](ADRs/16-data-quality.md) |
+| Gobierno | **DataHub** | [ADR-17](ADRs/17-data-governance.md) |
 | BI | **Metabase** | [ADR-18](ADRs/18-bi-tool.md) |
 
 ## Capas medallion
