@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: stg_produccion
+    description: >
+      Producción mensual de pozos no convencionales tipada y deduplicada.
+      Grano: un pozo por período (primer día del mes). Las correcciones
+      retroactivas de la fuente se resuelven por merge sobre (id_pozo, periodo).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - id_pozo
+              - periodo
+    columns:
+      - name: id_pozo
+        description: "Identificador natural del pozo en datos.gob.ar."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_pozos')
+                field: id_pozo
+              config:
+                severity: warn
+      - name: id_empresa
+        description: "Identificador normalizado (mayúsculas) de la empresa operadora."
+        data_tests:
+          - not_null
+      - name: empresa
+        description: "Nombre de la empresa operadora cuando está disponible; cae al identificador natural si la fuente no lo informa."
+      - name: area
+        description: "Área productiva normalizada para alimentar la dimensión gold."
+        data_tests:
+          - not_null
+      - name: cuenca
+        description: "Cuenca productiva normalizada para alimentar la dimensión gold."
+        data_tests:
+          - not_null
+      - name: tipo_recurso
+        description: "Tipo de recurso normalizado para alimentar la dimensión gold."
+        data_tests:
+          - not_null
+      - name: periodo
+        description: "Período de producción, normalizado al primer día del mes (DATE)."
+        data_tests:
+          - not_null
+      - name: prod_gas
+        description: "Producción de gas del período (unidades de la fuente)."
+        data_tests:
+          - not_null
+      - name: prod_petroleo
+        description: "Producción de petróleo del período (unidades de la fuente)."
+        data_tests:
+          - not_null
+      - name: prod_agua
+        description: "Producción de agua del período (unidades de la fuente)."
+      - name: dias_produccion
+        description: "Días de producción declarados para el período; usa 0 si la fuente no informa el campo."
+        data_tests:
+          - not_null
+      - name: _loaded_at
+        description: "Timestamp de carga heredado de bronze; base del filtro incremental."
+
+  - name: stg_pozos
+    description: >
+      Listado de pozos cargado por las operadoras, limpiado y deduplicado al
+      registro más reciente por pozo. Datos de referencia para las dimensiones.
+    columns:
+      - name: id_pozo
+        description: "Identificador natural del pozo (clave de referencia)."
+        data_tests:
+          - not_null
+          - unique
+      - name: sigla
+        description: "Sigla del pozo."
+      - name: formacion_productiva
+        description: "Formación productiva declarada del pozo."
+      - name: id_empresa
+        description: "Identificador normalizado (mayúsculas) de la empresa operadora."
+      - name: empresa
+        description: "Nombre de la empresa operadora cuando está disponible."
+      - name: area
+        description: "Área productiva del pozo."
+      - name: cuenca
+        description: "Cuenca productiva del pozo."
+      - name: tipo_recurso
+        description: "Tipo de recurso asociado al pozo."
+      - name: _loaded_at
+        description: "Timestamp de carga heredado de bronze."

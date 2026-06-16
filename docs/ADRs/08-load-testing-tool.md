@@ -32,11 +32,16 @@ Opción elegida: "Locust", porque permite modelar usuarios y escenarios HTTP en 
 
 ### Consecuencias
 
-* Bueno, porque los escenarios quedan expresados como código Python en `load/`.
-* Bueno, porque los presets facilitan correr carga normal, intensa o con UI.
-* Bueno, porque el tráfico sintético ayuda a visualizar métricas reales en Grafana.
-* Malo, porque agrega otra imagen/configuración Docker a mantener.
-* Malo, porque los resultados dependen del entorno desde donde se ejecuta la carga.
+**Pros**
+
+* Los escenarios quedan expresados como código Python en `load/`.
+* Los presets facilitan correr carga normal, intensa o con UI.
+* El tráfico sintético ayuda a visualizar métricas reales en Grafana.
+
+**Cons**
+
+* Agrega otra imagen/configuración Docker a mantener.
+* Los resultados dependen del entorno desde donde se ejecuta la carga.
 
 ### Confirmación
 

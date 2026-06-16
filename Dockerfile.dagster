@@ -1,0 +1,21 @@
+FROM python:3.10-slim
+
+ENV DAGSTER_HOME=/opt/dagster/dagster_home \
+    UV_PROJECT_ENVIRONMENT=/opt/dagster/app/.venv \
+    PATH=/opt/dagster/app/.venv/bin:$PATH
+RUN mkdir -p $DAGSTER_HOME
+
+WORKDIR /opt/dagster/app
+ENV PATH="/opt/dagster/app/.venv/bin:${PATH}"
+
+RUN pip install uv --no-cache-dir
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --group data --no-dev --frozen
+RUN dagster-webserver --help >/dev/null && dagster-daemon --help >/dev/null
+
+COPY workspace.yaml ./
+COPY data_platform/ ./data_platform/
+# Generate the dbt manifest at build time so @dbt_assets loads without a DB at runtime.
+RUN dbt deps --project-dir data_platform/transform --profiles-dir data_platform/transform \
+ && dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform

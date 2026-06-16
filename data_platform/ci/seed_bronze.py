@@ -1,0 +1,143 @@
+"""Load deterministic bronze fixtures so silver dbt models can run in CI.
+
+Reuses the production bronze loader (``load_bronze_table``) and warehouse
+connection instead of ``dbt seed``: ``dbt build`` would otherwise run seeds by
+default and the end-to-end orchestration (extraction -> ``dbt build``) would
+overwrite the real bronze data.
+"""
+
+from __future__ import annotations
+
+from data_platform.extraction.bronze_loader import BronzeLoad, load_bronze_table
+from data_platform.orchestration.assets.bronze import warehouse_connection
+
+
+LOAD_PERIOD = "2024-01"
+
+PRODUCCION_FIXTURE: list[dict[str, str]] = [
+    {
+        "idempresa": "YPF",
+        "empresa": "YPF S.A.",
+        "area": "Loma Campana",
+        "cuenca": "Neuquina",
+        "tipo_recurso": "SHALE",
+        "anio": "2024",
+        "mes": "1",
+        "idpozo": "135204",
+        "prod_pet": "120.500",
+        "prod_gas": "59.940",
+        "prod_agua": "10.000",
+        "dias_produccion": "31",
+        "fecha_data": "2024-01-31",
+    },
+    {
+        "idempresa": "YPF",
+        "empresa": "YPF S.A.",
+        "area": "Loma Campana",
+        "cuenca": "Neuquina",
+        "tipo_recurso": "SHALE",
+        "anio": "2024",
+        "mes": "2",
+        "idpozo": "135204",
+        "prod_pet": "118.000",
+        "prod_gas": "58.100",
+        "prod_agua": "9.500",
+        "dias_produccion": "29",
+        "fecha_data": "2024-02-29",
+    },
+    {
+        "idempresa": "PAMPA",
+        "empresa": "Pampa Energia",
+        "area": "El Mangrullo",
+        "cuenca": "Neuquina",
+        "tipo_recurso": "TIGHT",
+        "anio": "2024",
+        "mes": "1",
+        "idpozo": "200001",
+        "prod_pet": "80.000",
+        "prod_gas": "40.000",
+        "prod_agua": "5.000",
+        "dias_produccion": "31",
+        "fecha_data": "2024-01-31",
+    },
+    {
+        "idempresa": "CAPSA",
+        "empresa": "CAPSA Petroleum",
+        "area": "Cañadon Seco",
+        "cuenca": "Golfo San Jorge",
+        "tipo_recurso": "CONVENCIONAL",
+        "anio": "2024",
+        "mes": "1",
+        "idpozo": "300001",
+        "prod_pet": "55.000",
+        "prod_gas": "12.000",
+        "prod_agua": "8.000",
+        "dias_produccion": "31",
+        "fecha_data": "2024-01-31",
+    },
+]
+
+POZOS_FIXTURE: list[dict[str, str]] = [
+    {
+        "idpozo": "135204",
+        "sigla": "APA.Nq.ACO-13(d)",
+        "formprod": "FIMP",
+        "idempresa": "YPF",
+        "empresa": "YPF S.A.",
+        "area": "Loma Campana",
+        "cuenca": "Neuquina",
+        "tipo_recurso": "SHALE",
+        "fecha_data": "2024-01-31",
+    },
+    {
+        "idpozo": "200001",
+        "sigla": "PAM.Nq.X-1",
+        "formprod": "VMUT",
+        "idempresa": "PAMPA",
+        "empresa": "Pampa Energia",
+        "area": "El Mangrullo",
+        "cuenca": "Neuquina",
+        "tipo_recurso": "TIGHT",
+        "fecha_data": "2024-01-31",
+    },
+    {
+        "idpozo": "300001",
+        "sigla": "CAP.GSJ.CS-1",
+        "formprod": "CONV",
+        "idempresa": "CAPSA",
+        "empresa": "CAPSA Petroleum",
+        "area": "Cañadon Seco",
+        "cuenca": "Golfo San Jorge",
+        "tipo_recurso": "CONVENCIONAL",
+        "fecha_data": "2024-01-31",
+    },
+]
+
+
+def seed_bronze() -> None:
+    """Populate bronze tables with deterministic CI fixtures."""
+    with warehouse_connection() as conn:
+        load_bronze_table(
+            conn,
+            BronzeLoad(
+                table_name="produccion_raw",
+                load_period=LOAD_PERIOD,
+                source_url="https://example.test/produccion.csv",
+                resource_id="ci-produccion",
+                rows=PRODUCCION_FIXTURE,
+            ),
+        )
+        load_bronze_table(
+            conn,
+            BronzeLoad(
+                table_name="pozos_raw",
+                load_period=LOAD_PERIOD,
+                source_url="https://example.test/pozos.csv",
+                resource_id="ci-pozos",
+                rows=POZOS_FIXTURE,
+            ),
+        )
+
+
+if __name__ == "__main__":
+    seed_bronze()

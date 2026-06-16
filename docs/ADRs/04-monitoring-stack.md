@@ -31,9 +31,14 @@ Opción elegida: "Prometheus + Grafana", porque permiten recolectar y visualizar
 
 ### Consecuencias
 
-* Bueno, porque son herramientas conocidas y bien soportadas.
-* Bueno, porque el dashboard se puede versionar junto con el proyecto.
-* Malo, porque añade sobrecarga al mantener más contenedores en el ambiente de desarrollo.
+**Pros**
+
+* Son herramientas conocidas y bien soportadas.
+* El dashboard se puede versionar junto con el proyecto.
+
+**Cons**
+
+* Añade sobrecarga al mantener más contenedores en el ambiente de desarrollo.
 
 ### Confirmación
 
