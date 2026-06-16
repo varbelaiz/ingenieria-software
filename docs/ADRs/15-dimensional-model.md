@@ -52,12 +52,17 @@ se preserve suficiente historia de cambios de atributos.
 
 ## Consecuencias
 
-* Bueno, porque Metabase puede consultar una fact central con joins previsibles.
-* Bueno, porque dbt puede testear unicidad del grano y relaciones de cada FK.
-* Bueno, porque DataHub podra mostrar lineage claro por tabla gold.
-* Bueno, porque las dimensiones historizables ya tienen el contrato SCD-compatible.
-* Malo, porque hay mas modelos que mantener que en una tabla ancha.
-* Malo, porque la historizacion SCD completa requiere snapshots o historia de cambios
+**Pros**
+
+* Metabase puede consultar una fact central con joins previsibles.
+* Dbt puede testear unicidad del grano y relaciones de cada FK.
+* DataHub podra mostrar lineage claro por tabla gold.
+* Las dimensiones historizables ya tienen el contrato SCD-compatible.
+
+**Cons**
+
+* Hay mas modelos que mantener que en una tabla ancha.
+* La historizacion SCD completa requiere snapshots o historia de cambios
   adicional en un PR posterior.
 
 ## Confirmacion

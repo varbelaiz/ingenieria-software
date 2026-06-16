@@ -48,12 +48,17 @@ la edicion Enterprise. El metadata interno de Metabase corre en un Postgres prop
 
 ## Consecuencias
 
-* Bueno, porque los no tecnicos arman consultas y dashboards sin SQL.
-* Bueno, porque conecta nativo a Postgres y corre en el Compose de datos.
-* Bueno, porque los dashboards quedan versionados y se reaplican de forma idempotente.
-* Bueno, porque el estado interno de Metabase no se mezcla con los datos analiticos.
-* Malo, porque es menos flexible que Superset para visualizaciones avanzadas.
-* Malo, porque la provision por API depende de la estabilidad de los endpoints REST.
+**Pros**
+
+* Los no tecnicos arman consultas y dashboards sin SQL.
+* Conecta nativo a Postgres y corre en el Compose de datos.
+* Los dashboards quedan versionados y se reaplican de forma idempotente.
+* El estado interno de Metabase no se mezcla con los datos analiticos.
+
+**Cons**
+
+* Es menos flexible que Superset para visualizaciones avanzadas.
+* La provision por API depende de la estabilidad de los endpoints REST.
 
 ## Confirmacion
 

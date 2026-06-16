@@ -53,15 +53,20 @@ conectores disponibles y evidencia navegable en una sola UI.
 
 ## Consecuencias
 
-* Bueno, porque DataHub permite navegar lineage bronze -> silver -> gold desde la UI.
-* Bueno, porque las recetas de dbt y Postgres publican metadata del warehouse y resultados
+**Pros**
+
+* DataHub permite navegar lineage bronze -> silver -> gold desde la UI.
+* Las recetas de dbt y Postgres publican metadata del warehouse y resultados
   de calidad sin cambiar el pipeline principal.
-* Bueno, porque la herramienta esta alineada con la cursada y reduce riesgo de soporte.
-* Malo, porque el quickstart de DataHub es pesado: levanta Kafka, OpenSearch, MySQL y
+* La herramienta esta alineada con la cursada y reduce riesgo de soporte.
+
+**Cons**
+
+* El quickstart de DataHub es pesado: levanta Kafka, OpenSearch, MySQL y
   servicios propios.
-* Malo, porque corre en un Compose separado y local; no entra en la instancia AWS
+* Corre en un Compose separado y local; no entra en la instancia AWS
   `t3.micro` de Fase 1.
-* Malo, porque la metadata no aparece sola: hay que generar artefactos dbt y ejecutar las
+* La metadata no aparece sola: hay que generar artefactos dbt y ejecutar las
   recetas de ingesta para refrescar DataHub.
 
 ## Confirmacion

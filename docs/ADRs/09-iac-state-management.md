@@ -53,13 +53,18 @@ Un detalle de diseño resultante: el OIDC provider de GitHub Actions y el IAM ro
 
 ### Consecuencias
 
-* Bueno, porque consolidar servicios en una instancia mantiene el costo dentro del presupuesto y preserva el ambiente de staging.
-* Bueno, porque un único codebase Terraform cubre ambos ambientes sin duplicación.
-* Bueno, porque el state remoto en S3 permite que cualquier miembro del equipo aplique cambios de forma segura.
-* Bueno, porque `use_lockfile = true` evita applies concurrentes sin necesitar una tabla DynamoDB adicional.
-* Malo, porque la consolidación de servicios en una instancia elimina el aislamiento de fallos entre la API y el stack de monitoreo.
-* Malo, porque si el workspace `prod` es destruido, el workspace `staging` pierde el OIDC provider y el CD deja de funcionar.
-* Malo, porque Terraform Workspaces comparten el mismo backend bucket, lo que requiere cuidado al seleccionar el workspace activo antes de cada `apply`.
+**Pros**
+
+* Consolidar servicios en una instancia mantiene el costo dentro del presupuesto y preserva el ambiente de staging.
+* Un único codebase Terraform cubre ambos ambientes sin duplicación.
+* El state remoto en S3 permite que cualquier miembro del equipo aplique cambios de forma segura.
+* `use_lockfile = true` evita applies concurrentes sin necesitar una tabla DynamoDB adicional.
+
+**Cons**
+
+* La consolidación de servicios en una instancia elimina el aislamiento de fallos entre la API y el stack de monitoreo.
+* Si el workspace `prod` es destruido, el workspace `staging` pierde el OIDC provider y el CD deja de funcionar.
+* Terraform Workspaces comparten el mismo backend bucket, lo que requiere cuidado al seleccionar el workspace activo antes de cada `apply`.
 
 ### Confirmación
 

@@ -47,11 +47,16 @@ driver fuerte a favor de Airflow; en ausencia de eso, Dagster minimiza el trabaj
 
 ## Consecuencias
 
-* Bueno, porque particiones + assets dan idempotencia y backfill por fecha nativos.
-* Bueno, porque el lineage de assets se ingiere directo en DataHub.
-* Bueno, porque la UI provee logs y status por corrida (observabilidad mínima cubierta).
-* Malo, porque la comunidad y el material de soporte son menores que los de Airflow.
-* Malo, porque agrega un daemon adicional al stack (webserver + daemon).
+**Pros**
+
+* Particiones + assets dan idempotencia y backfill por fecha nativos.
+* El lineage de assets se ingiere directo en DataHub.
+* La UI provee logs y status por corrida (observabilidad mínima cubierta).
+
+**Cons**
+
+* La comunidad y el material de soporte son menores que los de Airflow.
+* Agrega un daemon adicional al stack (webserver + daemon).
 
 ## Confirmación
 

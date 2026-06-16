@@ -31,9 +31,14 @@ Opción elegida: "FastAPI", porque ofrece validación de esquemas con Pydantic y
 
 ### Consecuencias
 
-* Bueno, porque reduce el trabajo manual de documentación de endpoints.
-* Bueno, porque la validación de parámetros queda integrada al framework.
-* Malo, porque suma dependencia al ecosistema FastAPI/Pydantic.
+**Pros**
+
+* Reduce el trabajo manual de documentación de endpoints.
+* La validación de parámetros queda integrada al framework.
+
+**Cons**
+
+* Suma dependencia al ecosistema FastAPI/Pydantic.
 
 ### Confirmación
 

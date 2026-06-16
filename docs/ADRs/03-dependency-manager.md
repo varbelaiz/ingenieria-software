@@ -29,9 +29,14 @@ Opción elegida: "uv", porque resuelve e instala dependencias rápido, genera `u
 
 ### Consecuencias
 
-* Bueno, porque reduce el tiempo de instalación de dependencias frente al flujo tradicional con `pip`.
-* Bueno, porque estandariza el manejo de entornos virtuales sin herramientas extra.
-* Malo, porque es una tecnología relativamente nueva y parte del equipo podría no estar familiarizado.
+**Pros**
+
+* Reduce el tiempo de instalación de dependencias frente al flujo tradicional con `pip`.
+* Estandariza el manejo de entornos virtuales sin herramientas extra.
+
+**Cons**
+
+* Es una tecnología relativamente nueva y parte del equipo podría no estar familiarizado.
 
 ### Confirmación
 

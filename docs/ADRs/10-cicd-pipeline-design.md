@@ -36,12 +36,17 @@ El pipeline de CI se divide en tres jobs paralelos: `lint` (pre-commit hooks), `
 
 ### Consecuencias
 
-* Bueno, porque OIDC elimina la gestión de credenciales estáticas y reduce el riesgo de filtración.
-* Bueno, porque branch protection garantiza que ningún merge pase sin CI verde.
-* Bueno, porque los jobs paralelos reducen el tiempo total del pipeline respecto a una ejecución secuencial.
-* Bueno, porque el path filtering evita rebuilds y deploys ante cambios que no afectan la aplicación (docs, tests).
-* Malo, porque el IAM role de OIDC se crea solo en el workspace `prod` de Terraform (ver ADR-09), generando una dependencia de inicialización entre workspaces.
-* Malo, porque no se requiere review de otro miembro del equipo como condición de merge, lo que puede permitir merges sin segunda revisión.
+**Pros**
+
+* OIDC elimina la gestión de credenciales estáticas y reduce el riesgo de filtración.
+* Branch protection garantiza que ningún merge pase sin CI verde.
+* Los jobs paralelos reducen el tiempo total del pipeline respecto a una ejecución secuencial.
+* El path filtering evita rebuilds y deploys ante cambios que no afectan la aplicación (docs, tests).
+
+**Cons**
+
+* El IAM role de OIDC se crea solo en el workspace `prod` de Terraform (ver ADR-09), generando una dependencia de inicialización entre workspaces.
+* No se requiere review de otro miembro del equipo como condición de merge, lo que puede permitir merges sin segunda revisión.
 
 ### Confirmación
 

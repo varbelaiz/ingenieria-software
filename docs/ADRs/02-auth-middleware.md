@@ -30,9 +30,14 @@ Opción elegida: "Implementación en Middleware global de FastAPI", porque centr
 
 ### Consecuencias
 
-* Bueno, porque reduce el riesgo de olvidar autenticación al añadir nuevos endpoints de negocio.
-* Bueno, porque rechaza el tráfico no autenticado más temprano en el ciclo de vida del request.
-* Malo, porque cualquier endpoint público futuro requiere agregar una excepción explícita al middleware.
+**Pros**
+
+* Reduce el riesgo de olvidar autenticación al añadir nuevos endpoints de negocio.
+* Rechaza el tráfico no autenticado más temprano en el ciclo de vida del request.
+
+**Cons**
+
+* Cualquier endpoint público futuro requiere agregar una excepción explícita al middleware.
 
 ### Confirmación
 
