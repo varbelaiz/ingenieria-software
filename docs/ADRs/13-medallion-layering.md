@@ -1,4 +1,4 @@
-# ADR-12: Capas medallion para la plataforma de datos
+# ADR-13: Capas medallion para la plataforma de datos
 
 ```
 status: Aceptado
@@ -37,12 +37,17 @@ responsable del modelo estrella y las métricas consumibles.
 
 ## Consecuencias
 
-* Bueno, porque un cambio en reglas de negocio se resuelve reprocesando silver/gold sin
+**Pros**
+
+* Un cambio en reglas de negocio se resuelve reprocesando silver/gold sin
   volver a descargar la fuente.
-* Bueno, porque bronze permite auditar qué recurso y período de carga produjo cada fila.
-* Bueno, porque dbt puede declarar fuentes sobre bronze y exponer freshness desde
+* Bronze permite auditar qué recurso y período de carga produjo cada fila.
+* Dbt puede declarar fuentes sobre bronze y exponer freshness desde
   `_loaded_at`.
-* Malo, porque bronze no es cómodo para análisis directo: todo llega como texto.
+
+**Cons**
+
+* Bronze no es cómodo para análisis directo: todo llega como texto.
 
 ## Confirmación
 

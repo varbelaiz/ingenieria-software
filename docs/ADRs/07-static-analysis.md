@@ -30,9 +30,14 @@ Opción elegida: "Usar pre-commit hooks integrados con CI", porque centraliza la
 
 ### Consecuencias
 
-* Bueno, porque Black asegura un estilo unificado sin debates.
-* Bueno, porque Mypy y Pylint detectan errores simples antes de revisar manualmente.
-* Malo, porque puede generar fricción inicial si las reglas fallan por detalles menores.
+**Pros**
+
+* Black asegura un estilo unificado sin debates.
+* Mypy y Pylint detectan errores simples antes de revisar manualmente.
+
+**Cons**
+
+* Puede generar fricción inicial si las reglas fallan por detalles menores.
 
 ### Confirmación
 

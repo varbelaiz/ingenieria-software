@@ -28,10 +28,15 @@ Opción elegida: "Modelo Pull", porque desacopla los endpoints de negocio del pr
 
 ### Consecuencias
 
-* Bueno, porque la API no se bloquea si el sistema de monitoreo se cae o satura.
-* Bueno, porque no requiere credenciales ni llamadas salientes desde la API hacia el sistema de monitoreo.
-* Malo, porque las métricas en memoria se pierden al reiniciar el proceso de la API.
-* Malo, porque no se guardan eventos individuales, solo series agregadas.
+**Pros**
+
+* La API no se bloquea si el sistema de monitoreo se cae o satura.
+* No requiere credenciales ni llamadas salientes desde la API hacia el sistema de monitoreo.
+
+**Cons**
+
+* Las métricas en memoria se pierden al reiniciar el proceso de la API.
+* No se guardan eventos individuales, solo series agregadas.
 
 ### Confirmación
 

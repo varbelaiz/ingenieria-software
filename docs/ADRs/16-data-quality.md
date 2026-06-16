@@ -1,4 +1,4 @@
-# ADR-15: Calidad de datos persistida en gold con dbt
+# ADR-16: Calidad de datos persistida en gold con dbt
 
 ```
 status: Aceptado
@@ -48,12 +48,17 @@ La implementacion adoptada combina tres piezas:
 
 ## Consecuencias
 
-* Bueno, porque la calidad queda versionada junto a los modelos gold.
-* Bueno, porque un test fallido rompe el build y evita promociones incorrectas.
-* Bueno, porque las fallas quedan persistidas en `dbt_test_failures`.
-* Bueno, porque `gold.quality_marks` da una marca visible y consultable del estado.
-* Malo, porque la cobertura operativa queda limitada a lo que expresemos en dbt/SQL.
-* Malo, porque alertas, retries, schedules y backfills completos quedan para PR6.
+**Pros**
+
+* La calidad queda versionada junto a los modelos gold.
+* Un test fallido rompe el build y evita promociones incorrectas.
+* Las fallas quedan persistidas en `dbt_test_failures`.
+* `gold.quality_marks` da una marca visible y consultable del estado.
+
+**Cons**
+
+* La cobertura operativa queda limitada a lo que expresemos en dbt/SQL.
+* Alertas, retries, schedules y backfills completos quedan para PR6.
 
 ## Confirmacion
 

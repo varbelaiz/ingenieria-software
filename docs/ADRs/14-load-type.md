@@ -1,4 +1,4 @@
-# ADR-13: Tipo de carga (full vs incremental vs merge/upsert)
+# ADR-14: Tipo de carga (full vs incremental vs merge/upsert)
 
 ```
 status: Aceptado
@@ -49,11 +49,16 @@ así que se materializa como tabla deduplicada al registro más reciente por poz
 
 ## Consecuencias
 
-* Bueno, porque refleja correctamente las correcciones retroactivas de la fuente.
-* Bueno, porque permite reprocesar una fecha puntual (re-merge de esa partición).
-* Bueno, porque es idempotente por construcción.
-* Malo, porque el merge es más complejo que append y requiere una `unique_key` confiable.
-* Malo, porque un cambio de esquema en la fuente exige revisar la lógica de merge.
+**Pros**
+
+* Refleja correctamente las correcciones retroactivas de la fuente.
+* Permite reprocesar una fecha puntual (re-merge de esa partición).
+* Es idempotente por construcción.
+
+**Cons**
+
+* El merge es más complejo que append y requiere una `unique_key` confiable.
+* Un cambio de esquema en la fuente exige revisar la lógica de merge.
 
 ## Confirmación
 

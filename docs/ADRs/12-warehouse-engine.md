@@ -1,4 +1,4 @@
-# ADR-17: Motor del warehouse
+# ADR-12: Motor del warehouse
 
 ```
 status: Aceptado
@@ -37,10 +37,15 @@ y corre en el mismo Compose en el puerto 5433 (no colisiona con instancias local
 
 ## Consecuencias
 
-* Bueno, porque es multiusuario y tiene conectores nativos en todo el stack.
-* Bueno, porque corre local en Compose sin costo cloud.
-* Bueno, porque `dbt-postgres` soporta `incremental_strategy='merge'` (requisito del ADR-13).
-* Malo, porque no es columnar: en volúmenes mucho mayores rendiría peor que un warehouse
+**Pros**
+
+* Es multiusuario y tiene conectores nativos en todo el stack.
+* Corre local en Compose sin costo cloud.
+* `dbt-postgres` soporta `incremental_strategy='merge'` (requisito del ADR-14).
+
+**Cons**
+
+* No es columnar: en volúmenes mucho mayores rendiría peor que un warehouse
   analítico dedicado (no es el caso a este volumen).
 
 ## Confirmación

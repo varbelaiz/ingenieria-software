@@ -27,7 +27,7 @@ ese grano.
 * Metadata tecnica: `_loaded_at`.
 
 La fact es incremental con estrategia `merge` y `unique_key=['id_pozo', 'periodo']`,
-heredando la decision del ADR-13 para absorber correcciones retroactivas.
+heredando la decision del ADR-14 para absorber correcciones retroactivas.
 
 ## Dimensiones
 

@@ -30,9 +30,14 @@ Opción elegida: "Múltiples contenedores orquestados con Docker Compose". La AP
 
 ### Consecuencias
 
-* Bueno, porque cada servicio se puede configurar y reiniciar por separado.
-* Bueno, porque el fallo de Grafana no interrumpe la disponibilidad de la API para los clientes.
-* Malo, porque orquestar múltiples contenedores hace el despliegue local marginalmente más complejo que correr un solo script.
+**Pros**
+
+* Cada servicio se puede configurar y reiniciar por separado.
+* El fallo de Grafana no interrumpe la disponibilidad de la API para los clientes.
+
+**Cons**
+
+* Orquestar múltiples contenedores hace el despliegue local marginalmente más complejo que correr un solo script.
 
 ### Confirmación
 
