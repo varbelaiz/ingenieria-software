@@ -11,7 +11,10 @@ import pytest
 
 from data_platform.bi import metabase_config
 from data_platform.bi.metabase_config import (
+    DISPLAY_LINE,
+    DISPLAY_SCALAR,
     DISPLAY_TABLE,
+    PERIOD_FILTER_PLACEHOLDER,
     VALID_DISPLAYS,
 )
 
@@ -35,11 +38,11 @@ def test_every_card_has_a_valid_display() -> None:
         assert card.display in VALID_DISPLAYS
 
 
-def test_graph_cards_define_axes_and_tables_do_not() -> None:
-    """Charts map dimensions and metrics; tables carry no axis settings."""
+def test_graph_cards_define_axes_and_others_do_not() -> None:
+    """Charts map dimensions and metrics; tables and scalars carry no axis settings."""
     for card in metabase_config.CARDS:
         settings = card.visualization_settings()
-        if card.display == DISPLAY_TABLE:
+        if card.display in (DISPLAY_TABLE, DISPLAY_SCALAR):
             assert "graph.dimensions" not in settings
             assert "graph.metrics" not in settings
             assert not card.dimensions
@@ -49,6 +52,73 @@ def test_graph_cards_define_axes_and_tables_do_not() -> None:
             assert card.metrics, f"{card.name} is a chart without metrics"
             assert settings["graph.dimensions"] == list(card.dimensions)
             assert settings["graph.metrics"] == list(card.metrics)
+
+
+def test_scalar_cards_are_single_value_kpis() -> None:
+    """The KPI cards render as scalars over the gold layer with empty settings."""
+    expected = {
+        "Producción acumulada de gas",
+        "Producción acumulada de petróleo",
+        "Pozos activos en el último mes",
+        "Último período cargado",
+    }
+    scalars = {
+        card.name for card in metabase_config.CARDS if card.display == DISPLAY_SCALAR
+    }
+    assert scalars == expected
+    for name in expected:
+        card = metabase_config.get_card(name)
+        assert not card.visualization_settings()
+        assert "gold." in card.sql
+
+
+def test_tipo_recurso_card_splits_by_resource_type() -> None:
+    """A line card breaks production down by tipo de recurso."""
+    card = metabase_config.get_card("Producción por tipo de recurso")
+    assert card.display == DISPLAY_LINE
+    assert "gold.dim_tipo_recurso" in card.sql
+    assert card.dimensions == ("periodo", "tipo_recurso")
+
+
+def test_date_filter_placeholder_matches_opt_in_flag() -> None:
+    """A card embeds the date filter placeholder iff it opts into the date filter."""
+    for card in metabase_config.CARDS:
+        has_placeholder = PERIOD_FILTER_PLACEHOLDER in card.sql
+        assert has_placeholder == card.date_filtered, card.name
+
+
+def test_unfiltered_cards_are_freshness_and_quality() -> None:
+    """KPIs meant as 'latest' signals and the quality table ignore the date filter."""
+    unfiltered = {card.name for card in metabase_config.CARDS if not card.date_filtered}
+    assert unfiltered == {
+        "Pozos activos en el último mes",
+        "Último período cargado",
+        "Marca de calidad de los datos",
+    }
+
+
+def test_date_filtered_cards_keep_fct_unaliased_in_outer_query() -> None:
+    """Field filters reference the physical table, so the outer fct is not aliased.
+
+    A CTE may still alias fct in its own scope (the filter never expands there); what
+    matters is that the query the filter lands in selects from an un-aliased
+    ``gold.fct_produccion`` and never aliases it on the same line as the ``where``.
+    """
+    for card in metabase_config.CARDS:
+        if not card.date_filtered:
+            continue
+        # The field filter expands to "gold"."fct_produccion"."periodo"; an outer
+        # alias would shadow that and break the query when a value is applied.
+        assert "from gold.fct_produccion\n" in card.sql, card.name
+        assert metabase_config.PERIOD_FILTER_PLACEHOLDER in card.sql, card.name
+
+
+def test_validation_sql_renders_filter_placeholder_as_noop() -> None:
+    """The placeholder is rendered to a tautology for offline SQL validation."""
+    card = metabase_config.get_card("Producción de gas por cuenca")
+    rendered = metabase_config.sql_for_validation(card)
+    assert PERIOD_FILTER_PLACEHOLDER not in rendered
+    assert "where true" in rendered
 
 
 def test_secondary_axis_metrics_are_emitted_as_series_settings() -> None:

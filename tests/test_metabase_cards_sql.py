@@ -49,8 +49,9 @@ def gold_connection(warehouse_connection: Any) -> Any:
 )
 def test_card_sql_explains_against_gold(card: Any, gold_connection: Any) -> None:
     """Each card's native SQL must EXPLAIN cleanly against the real gold schema."""
+    sql = metabase_config.sql_for_validation(card)
     with gold_connection.cursor() as cursor:
         try:
-            cursor.execute(f"EXPLAIN {card.sql}")
+            cursor.execute(f"EXPLAIN {sql}")
         finally:
             gold_connection.rollback()
