@@ -33,10 +33,25 @@ REQUEST_TIMEOUT = 30
 HEALTH_RETRIES = 40
 HEALTH_DELAY_SECONDS = 3
 
-# Metabase dashboard grid is 24 columns wide; lay cards out two per row.
+# Resolving the periodo field id needs the gold schema scanned; on a fresh instance
+# the first sync is asynchronous, so retry while nudging Metabase to re-sync.
+SYNC_RETRIES = 20
+SYNC_DELAY_SECONDS = 3
+
+# Metabase dashboard grid is 24 columns wide. Charts take half a row, the quality
+# table the full width and KPI scalars a quarter so four sit on one row.
 GRID_WIDTH = 24
 CARD_WIDTH = 12
 CARD_HEIGHT = 8
+SCALAR_WIDTH = 6
+SCALAR_HEIGHT = 4
+
+# Single dashboard-level date range filter wired to each opted-in card's field filter.
+PERIOD_PARAM_ID = "periodo01"
+PERIOD_PARAM_NAME = "Período"
+PERIOD_PARAM_SLUG = "periodo"
+PERIOD_FILTER_WIDGET = "date/all-options"
+PERIOD_FILTER_TAG_ID = "periodo-filter-tag"
 
 
 @dataclass(frozen=True)
@@ -257,7 +272,51 @@ def ensure_collection(client: MetabaseClient) -> int:
     return int(created["id"])
 
 
-def _card_payload(card: Card, database_id: int, collection_id: int) -> dict[str, Any]:
+def resolve_periodo_field_id(client: MetabaseClient, database_id: int) -> int:
+    """Return the Metabase field id of ``gold.fct_produccion.periodo``.
+
+    The date filter is a field filter, so it needs the warehouse field id, which only
+    exists once Metabase has scanned the schema. On a fresh instance that scan is
+    asynchronous; nudge a re-sync and retry until the field appears.
+    """
+    for attempt in range(1, SYNC_RETRIES + 1):
+        metadata = client.request_dict("GET", f"/database/{database_id}/metadata")
+        for table in metadata.get("tables", []):
+            if (
+                table.get("schema") == metabase_config.WAREHOUSE_SCHEMA
+                and table.get("name") == "fct_produccion"
+            ):
+                for field in table.get("fields", []):
+                    if field.get("name") == "periodo":
+                        return int(field["id"])
+        client.request("POST", f"/database/{database_id}/sync_schema")
+        print(
+            "Waiting for gold.fct_produccion.periodo to be synced "
+            f"({attempt}/{SYNC_RETRIES})..."
+        )
+        time.sleep(SYNC_DELAY_SECONDS)
+    raise RuntimeError("gold.fct_produccion.periodo field was not synced in time")
+
+
+def _template_tags(card: Card, periodo_field_id: int) -> dict[str, Any]:
+    """Field-filter template tag for opted-in cards; empty otherwise."""
+    if not card.date_filtered:
+        return {}
+    return {
+        metabase_config.PERIOD_FILTER_TAG: {
+            "id": PERIOD_FILTER_TAG_ID,
+            "name": metabase_config.PERIOD_FILTER_TAG,
+            "display-name": PERIOD_PARAM_NAME,
+            "type": "dimension",
+            "dimension": ["field", periodo_field_id, None],
+            "widget-type": PERIOD_FILTER_WIDGET,
+        }
+    }
+
+
+def _card_payload(
+    card: Card, database_id: int, collection_id: int, periodo_field_id: int
+) -> dict[str, Any]:
     return {
         "name": card.name,
         "description": card.description,
@@ -267,7 +326,10 @@ def _card_payload(card: Card, database_id: int, collection_id: int) -> dict[str,
         "dataset_query": {
             "type": "native",
             "database": database_id,
-            "native": {"query": card.sql, "template-tags": {}},
+            "native": {
+                "query": card.sql,
+                "template-tags": _template_tags(card, periodo_field_id),
+            },
         },
     }
 
@@ -278,9 +340,10 @@ def ensure_card(
     database_id: int,
     collection_id: int,
     existing: dict[str, int],
+    periodo_field_id: int,
 ) -> int:
     """Create or update a single card (idempotent by name within the collection)."""
-    payload = _card_payload(card, database_id, collection_id)
+    payload = _card_payload(card, database_id, collection_id, periodo_field_id)
     if card.name in existing:
         card_id = existing[card.name]
         client.request("PUT", f"/card/{card_id}", json=payload)
@@ -312,16 +375,31 @@ def ensure_dashboard(
         )
         dashboard_id = int(created["id"])
 
+    client.request(
+        "PUT",
+        f"/dashboard/{dashboard_id}",
+        json={
+            "dashcards": _build_dashcards(card_ids),
+            "parameters": _dashboard_parameters(),
+        },
+    )
+    return dashboard_id
+
+
+def _build_dashcards(card_ids: dict[str, int]) -> list[dict[str, Any]]:
+    """Lay the dashboard cards out on the 24-column grid, wrapping by row height."""
     dashcards = []
     row = 0
     col = 0
-    for index, card_name in enumerate(dashboard.card_names):
-        full_width = metabase_config.get_card(card_name).full_width
-        width = GRID_WIDTH if full_width else CARD_WIDTH
+    row_height = 0
+    for index, card_name in enumerate(metabase_config.DASHBOARD.card_names):
+        card = metabase_config.get_card(card_name)
+        width, height = _card_size(card)
         # Wrap to the next row when the card does not fit in the remaining width.
         if col + width > GRID_WIDTH:
-            row += CARD_HEIGHT
+            row += row_height
             col = 0
+            row_height = 0
         dashcards.append(
             {
                 "id": -(index + 1),
@@ -329,16 +407,55 @@ def ensure_dashboard(
                 "row": row,
                 "col": col,
                 "size_x": width,
-                "size_y": CARD_HEIGHT,
+                "size_y": height,
+                "parameter_mappings": _parameter_mappings(card, card_ids[card_name]),
             }
         )
         col += width
+        row_height = max(row_height, height)
         if col >= GRID_WIDTH:
-            row += CARD_HEIGHT
+            row += row_height
             col = 0
+            row_height = 0
+    return dashcards
 
-    client.request("PUT", f"/dashboard/{dashboard_id}", json={"dashcards": dashcards})
-    return dashboard_id
+
+def _card_size(card: Card) -> tuple[int, int]:
+    """Return the (width, height) of a card on the 24-column dashboard grid."""
+    if card.full_width:
+        return GRID_WIDTH, CARD_HEIGHT
+    if card.display == metabase_config.DISPLAY_SCALAR:
+        return SCALAR_WIDTH, SCALAR_HEIGHT
+    return CARD_WIDTH, CARD_HEIGHT
+
+
+def _dashboard_parameters() -> list[dict[str, Any]]:
+    """The single date range filter exposed on the dashboard."""
+    return [
+        {
+            "id": PERIOD_PARAM_ID,
+            "name": PERIOD_PARAM_NAME,
+            "slug": PERIOD_PARAM_SLUG,
+            "type": PERIOD_FILTER_WIDGET,
+            "sectionId": "date",
+        }
+    ]
+
+
+def _parameter_mappings(card: Card, card_id: int) -> list[dict[str, Any]]:
+    """Link the dashboard date filter to a card's field-filter template tag."""
+    if not card.date_filtered:
+        return []
+    return [
+        {
+            "parameter_id": PERIOD_PARAM_ID,
+            "card_id": card_id,
+            "target": [
+                "dimension",
+                ["template-tag", metabase_config.PERIOD_FILTER_TAG],
+            ],
+        }
+    ]
 
 
 def provision() -> int:
@@ -353,6 +470,7 @@ def provision() -> int:
 
     database_id = ensure_database(client, settings)
     collection_id = ensure_collection(client)
+    periodo_field_id = resolve_periodo_field_id(client, database_id)
 
     existing_cards = {
         card["name"]: int(card["id"])
@@ -363,7 +481,7 @@ def provision() -> int:
     card_ids: dict[str, int] = {}
     for card in metabase_config.CARDS:
         card_ids[card.name] = ensure_card(
-            client, card, database_id, collection_id, existing_cards
+            client, card, database_id, collection_id, existing_cards, periodo_field_id
         )
 
     dashboard_id = ensure_dashboard(client, collection_id, card_ids)
