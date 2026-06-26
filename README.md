@@ -23,6 +23,7 @@ La documentación técnica completa está en [`docs/`](docs/index.md):
 - [Load Testing](docs/load-testing.md) — tráfico sintético con Locust
 - [Gobierno de datos](docs/governance.md) — quickstart local de DataHub
 - [Ops](docs/ops.md) — deploy, secretos y monitoreo operativo
+- [Plan Fase 3](docs/planes/fase-3.md) — PRs, ADRs y handoff para ML Engineering
 - [Runbook de Data Engineer](docs/runbooks/data-engineer.md) — backfill histórico y verificación de reprocesos
 - [Runbook de BI User](docs/runbooks/bi-user.md) — validar frescura y calidad antes de publicar
 
@@ -138,6 +139,44 @@ por query (`MB_*_QUERY_ROW_LIMIT`) por encima del default de 2000 para que ningu
 trunque silenciosamente al crecer los datos. Las credenciales por defecto
 (`METABASE_ADMIN_*`, `MB_ENCRYPTION_SECRET_KEY`, `metabase_ro`) son solo para uso local:
 rotalas y usa un secreto aleatorio real en cualquier despliegue compartido.
+
+## Plataforma ML Engineering (Fase 3 - en desarrollo)
+
+La Fase 3 integra el servicio de predicciones con un flujo reproducible de ML Engineering.
+El objetivo es que las features usadas por entrenamiento e inferencia queden persistidas,
+que cada entrenamiento registre metricas y artefactos, y que la API pueda servir el modelo
+vigente con trazabilidad hacia el run que lo genero.
+
+Arquitectura objetivo:
+
+```text
+gold / warehouse
+      |
+      v
+feature store persistido
+      |
+      +--> training dataset por as_of_date --> training + validation
+                                              |
+                                              v
+                                      MLflow tracking + registry
+                                              |
+                                              v
+API REST --> modelo vigente + lookup de features --> prediccion
+```
+
+El desarrollo se divide en PRs chicos y documentados en
+[`docs/planes/fase-3.md`](docs/planes/fase-3.md). Las decisiones clave estan cubiertas
+por ADRs comparativos:
+
+- [ADR-20](docs/ADRs/20-experiment-tracking.md) — tracking de experimentos
+- [ADR-21](docs/ADRs/21-feature-store.md) — feature store persistido
+- [ADR-22](docs/ADRs/22-model-registry.md) — registro y promocion de modelos
+- [ADR-23](docs/ADRs/23-training-orchestration.md) — orquestacion de training/retraining
+- [ADR-24](docs/ADRs/24-ml-pipeline-cicd.md) — CI/CD de pipelines ML
+
+La entrega de esta fase no requiere servicio live en produccion. La demostracion final se
+enfoca en evidencia local: runs con metricas en MLflow, llamadas a la API con distintas
+condiciones, modelo vigente registrado y trigger manual/recurrente de retraining.
 ## Plataforma de datos (Dagster)
 
 El pipeline corre como un grafo de assets de Dagster: los assets de bronze
