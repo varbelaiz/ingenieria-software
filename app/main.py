@@ -14,6 +14,7 @@ from app.forecast import router as forecast_router
 from app.health import router as health_router
 from app.middleware import ApiKeyMiddleware
 from app.monitoring import router as monitoring_router, metrics_adapter
+from app.predictions import router as predictions_router
 from app.wells import router as wells_router
 from app.alerts import (
     AlertConfig,
@@ -132,6 +133,7 @@ app.add_middleware(ApiKeyMiddleware)
 
 app.include_router(wells_router)
 app.include_router(forecast_router)
+app.include_router(predictions_router)
 app.include_router(health_router)
 app.include_router(monitoring_router)
 

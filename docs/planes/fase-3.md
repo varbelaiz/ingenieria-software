@@ -17,10 +17,10 @@ Cada PR debe actualizar esta seccion antes de cerrarse:
 
 | Campo | Valor |
 |-------|-------|
-| Ultima actualizacion | 2026-06-25 |
-| Branch base esperada | `develop` sincronizada con `origin/develop` |
-| Estado global | PR 3 listo para review en paralelo con PR 2 |
-| Siguiente PR recomendado | PR 4 - `feature/prediction-api-contract`, o PR 5 cuando PR2 y PR3 esten integrados |
+| Ultima actualizacion | 2026-06-28 |
+| Branch base esperada | PR 3 integrado en `feature/prediction-api-contract` |
+| Estado global | PR 4 listo para review; PR 2 y PR 3 siguen como dependencias de PR 5 |
+| Siguiente PR recomendado | Integrar PR 2, PR 3 y PR 4 antes de crear `feature/training-pipeline` |
 | Riesgo abierto principal | `pre-commit run --all-files` no pudo completar localmente en PR1 porque el entorno no pudo descargar hooks desde GitHub |
 
 ### Regla de handoff entre agentes
@@ -432,12 +432,28 @@ uv run pytest tests/test_middleware.py
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/prediction-api-contract`, con PR 3 mergeado
 * Comandos corridos:
+  * `.venv/bin/pytest tests/test_predictions.py tests/test_middleware.py tests/test_forecast.py -q`
+    -> 19 passed
+  * `.venv/bin/python -m black --check ...`, `flake8` y `mypy` sobre los archivos
+    tocados -> sin errores
+  * `.venv/bin/pytest -q` -> bloqueado durante collection porque el entorno no tiene
+    instalados `mlflow` ni el ejecutable `dbt`; `uv` tampoco esta disponible en `PATH`
 * Endpoints agregados:
+  * `POST /api/v1/predictions`
+  * `GET /api/v1/models/current`
 * Contrato request/response:
-* Siguiente PR desbloqueado: PR 6
+  * request: `well_id`, `as_of_date`, `horizon_days` (1-365)
+  * response: prediccion numerica, metadata estable de modelo y `feature_as_of_date`
+  * adapter actual: `BaselinePredictionService`, reemplazable por la implementacion de
+    registry de PR 6 mediante el protocolo `PredictionService`
+* Archivos clave:
+  * `app/predictions/routes.py`
+  * `ml/inference/service.py`
+  * `tests/test_predictions.py`
+* Siguiente PR desbloqueado: PR 5 cuando PR 2, PR 3 y PR 4 esten integrados
 
 ---
 
