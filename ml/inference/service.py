@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol
 
+from ml.features.store import FeatureNotFoundError, FeatureStore
+from ml.registry.client import RegistryReader
+
 
 BASE_PRODUCTION_BY_WELL = {
     "POZO-001": 1200.0,
@@ -25,6 +28,7 @@ class ModelMetadata:
     version: str
     run_id: str | None
     alias: str
+    metrics: dict[str, float]
 
 
 @dataclass(frozen=True)
@@ -56,6 +60,7 @@ class BaselinePredictionService:
         version="baseline-v1",
         run_id=None,
         alias="baseline",
+        metrics={},
     )
 
     def predict(
@@ -81,3 +86,59 @@ class BaselinePredictionService:
         """Return stable metadata for the temporary baseline."""
 
         return self._metadata
+
+
+class RegistryPredictionService:
+    """Inference implementation backed by persisted features and champion model."""
+
+    def __init__(
+        self,
+        *,
+        feature_store: FeatureStore,
+        registry: RegistryReader,
+    ) -> None:
+        self._feature_store = feature_store
+        self._registry = registry
+
+    def predict(
+        self, *, well_id: str, as_of_date: date, horizon_days: int
+    ) -> PredictionResult:
+        """Predict recursively in monthly steps using point-in-time features."""
+
+        try:
+            features = self._feature_store.get_features(well_id, as_of_date)
+        except FeatureNotFoundError as error:
+            raise FeaturesNotFoundError(
+                f"No features found for well {well_id}"
+            ) from error
+
+        champion = self._registry.load_champion()
+        value = float(features.gas_production_current)
+        monthly_steps = max(1, (horizon_days + 29) // 30)
+        for _ in range(monthly_steps):
+            value = champion.model.predict(value)
+
+        metadata = champion.metadata
+        return PredictionResult(
+            value=round(max(value, 0.0), 2),
+            feature_as_of_date=features.as_of_date,
+            model=ModelMetadata(
+                name=metadata.name,
+                version=metadata.version,
+                run_id=metadata.run_id,
+                alias=metadata.alias,
+                metrics=metadata.metrics,
+            ),
+        )
+
+    def current_model(self) -> ModelMetadata:
+        """Resolve fresh champion metadata for the diagnostic endpoint."""
+
+        metadata = self._registry.load_champion().metadata
+        return ModelMetadata(
+            name=metadata.name,
+            version=metadata.version,
+            run_id=metadata.run_id,
+            alias=metadata.alias,
+            metrics=metadata.metrics,
+        )

@@ -3,11 +3,25 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.predictions import routes
+from ml.inference.service import BaselinePredictionService
 from tests import TEST_API_KEY
+import pytest
 
 
 client = TestClient(app)
 VALID_HEADERS = {"X-API-Key": TEST_API_KEY}
+
+
+@pytest.fixture(autouse=True)
+def use_baseline_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep PR 4 contract tests independent from live ML infrastructure."""
+
+    monkeypatch.setattr(
+        routes,
+        "prediction_service",
+        BaselinePredictionService(),
+    )
 
 
 def test_create_prediction_returns_stable_baseline_contract() -> None:
@@ -33,6 +47,7 @@ def test_create_prediction_returns_stable_baseline_contract() -> None:
             "version": "baseline-v1",
             "run_id": None,
             "alias": "baseline",
+            "metrics": {},
         },
         "features": {"feature_as_of_date": "2026-04-01"},
     }
@@ -48,6 +63,7 @@ def test_get_current_model_returns_baseline_metadata() -> None:
         "version": "baseline-v1",
         "run_id": None,
         "alias": "baseline",
+        "metrics": {},
     }
 
 

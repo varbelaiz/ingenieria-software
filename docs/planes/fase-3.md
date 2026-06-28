@@ -19,8 +19,8 @@ Cada PR debe actualizar esta seccion antes de cerrarse:
 |-------|-------|
 | Ultima actualizacion | 2026-06-28 |
 | Branch base esperada | PR 3 integrado en `feature/prediction-api-contract` |
-| Estado global | PR 5 listo para review sobre PR 4, con PR 2 y PR 3 integrados |
-| Siguiente PR recomendado | PR 6 - `feature/model-registry-promotion` desde PR 5 |
+| Estado global | PR 6 listo para review; ramas PR 4-6 publicadas en cadena |
+| Siguiente PR recomendado | PR 7 - `feature/retraining-orchestration` desde PR 6 |
 | Riesgo abierto principal | `pre-commit run --all-files` no pudo completar localmente en PR1 porque el entorno no pudo descargar hooks desde GitHub |
 
 ### Regla de handoff entre agentes
@@ -127,7 +127,7 @@ La asignacion es flexible, pero el total queda balanceado: 3 PRs por persona.
 | 3 | `feature/mlflow-tracking` | B | PR 1 | listo para review | MLflow local + tracking helpers |
 | 4 | `feature/prediction-api-contract` | C | PR 3 | listo para review | contrato API de prediccion y tests base |
 | 5 | `feature/training-pipeline` | A | PR 2 + PR 3 + PR 4 | listo para review | entrenamiento reproducible por `as_of_date` |
-| 6 | `feature/model-registry-promotion` | B | PR 3 + PR 5 | pendiente | registro, validacion y promocion de modelos |
+| 6 | `feature/model-registry-promotion` | B | PR 3 + PR 5 | listo para review | registro, validacion y promocion de modelos |
 | 7 | `feature/retraining-orchestration` | C | PR 2 + PR 5 + PR 6 | pendiente | retrain manual/recurrente con Dagster |
 | 8 | `feature/ml-pipeline-cicd` | A | PR 5 + PR 6 + PR 7 | pendiente | CI/CD de pipelines ML |
 | 9 | `feature/phase3-docs-demo` | B | PR 1-8 | pendiente | README final, runbook y guion/evidencia de video |
@@ -600,11 +600,25 @@ uv run uvicorn app.main:app --reload
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/model-registry-promotion`, apilada sobre PR 5
 * Comandos corridos:
-* Modelo/version promovido de ejemplo:
+  * `.venv/bin/pytest tests/test_model_registry.py tests/test_model_promotion.py tests/test_registry_inference.py tests/test_predictions.py tests/test_training_dataset.py tests/test_training_pipeline.py tests/test_feature_store.py -q`
+    mas middleware y forecast -> 40 passed
+  * Black, flake8, mypy y pylint sobre registry, inference, API y tests -> sin errores;
+    pylint 10.00/10
+  * demo real contra MLflow/Postgres pendiente por dependencias ausentes en el entorno
+* Modelo/version promovido de ejemplo: version `4`, run `run-4`, alias `champion` en
+  tests; politica validada para promoted/rejected/missing MAE
 * Endpoint verificado:
+  * `POST /api/v1/predictions` usa features point-in-time y el champion
+  * `GET /api/v1/models/current` devuelve nombre, version, run ID, alias y metricas
+  * ausencia de champion devuelve `503`
+* Decisiones:
+  * aliases `candidate`/`champion`; no se usan stages deprecados
+  * backend por defecto: registry; `ML_INFERENCE_BACKEND=baseline` conserva fallback
+    explicito para desarrollo
+  * horizontes mayores a 30 dias aplican el modelo recursivamente por mes
 * Siguiente PR desbloqueado: PR 7
 
 ---
