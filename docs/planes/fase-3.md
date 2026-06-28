@@ -390,7 +390,15 @@ final exista. El objetivo es que API, tests y demo tengan una superficie estable
    * mientras PR 6 no exista, puede devolver prediccion baseline controlada.
    * dejar TODO claro o feature flag para conectar registry real despues.
 
-4. Tests con `tests.TEST_API_KEY`:
+4. Recomendacion no bloqueante para evaluar durante el diseño:
+   * definir como la API adoptaria un modelo nuevo cuando PR 6 promueva una version en
+     el registry.
+   * comparar al menos consulta dinamica del modelo vigente, cache con refresh y reinicio
+     controlado del servicio.
+   * no es necesario implementar el mecanismo definitivo en este PR; alcanza con evitar
+     que el contrato o el adapter temporal impidan incorporarlo despues.
+
+5. Tests con `tests.TEST_API_KEY`:
    * request exitoso.
    * auth requerida.
    * pozo inexistente o features faltantes.
@@ -642,6 +650,13 @@ servicio live de produccion.
 
 4. Documentar equivalentes locales:
    * comandos para correr los mismos checks fuera de GitHub.
+
+5. Recomendacion no bloqueante para evaluar segun el alcance disponible:
+   * complementar los checks de CI con una evidencia minima de CD, por ejemplo construir
+     y versionar una imagen o artefacto del pipeline y ejecutar un smoke deployment.
+   * no requiere publicar un servicio live en produccion; puede resolverse con un
+     artefacto del workflow o un despliegue efimero y reproducible.
+   * documentar la alternativa evaluada y el motivo si se decide no incorporarla.
 
 ### ADR asociado
 
