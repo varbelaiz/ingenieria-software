@@ -49,6 +49,9 @@ class FeatureRepository(Protocol):
     def lookup_features(self, well_id: str, as_of_date: date) -> FeatureRow | None:
         """Return the latest feature row available at or before ``as_of_date``."""
 
+    def list_features(self, as_of_date: date) -> list[FeatureRow]:
+        """Return all feature rows whose event time is within the cutoff."""
+
 
 class FeatureStore:
     """High-level feature lookup API with controlled domain errors."""
@@ -89,6 +92,18 @@ class InMemoryFeatureRepository:
         if not candidates:
             return None
         return max(candidates, key=lambda row: row.as_of_date)
+
+    def list_features(self, as_of_date: date) -> list[FeatureRow]:
+        """Return deterministic point-in-time history for training."""
+
+        return sorted(
+            (
+                row
+                for row in self._rows_by_grain.values()
+                if row.as_of_date <= as_of_date
+            ),
+            key=lambda row: (row.well_id, row.as_of_date),
+        )
 
 
 class PostgresFeatureRepository:
@@ -139,6 +154,36 @@ class PostgresFeatureRepository:
         if row is None:
             return None
         return _row_from_mapping(row)
+
+    def list_features(self, as_of_date: date) -> list[FeatureRow]:
+        """Read complete feature history without crossing the training cutoff."""
+
+        connection = self._connection_factory()
+        with _open_cursor(connection) as cursor:
+            cursor.execute(
+                f"""
+                select
+                    well_id,
+                    as_of_date,
+                    gas_production_current,
+                    gas_production_avg_3m,
+                    gas_production_avg_6m,
+                    gas_production_trend_3m,
+                    oil_production_current,
+                    water_production_current,
+                    producing_days_available,
+                    production_months_available,
+                    formation,
+                    basin,
+                    resource_type
+                from {self._qualified_table}
+                where as_of_date <= %s
+                order by well_id, as_of_date
+                """,
+                (as_of_date,),
+            )
+            rows = cursor.fetchall()
+        return [_row_from_mapping(row) for row in rows]
 
 
 def _validate_identifier(identifier: str) -> str:

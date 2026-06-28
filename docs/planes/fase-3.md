@@ -19,8 +19,8 @@ Cada PR debe actualizar esta seccion antes de cerrarse:
 |-------|-------|
 | Ultima actualizacion | 2026-06-28 |
 | Branch base esperada | PR 3 integrado en `feature/prediction-api-contract` |
-| Estado global | PR 4 listo para review; PR 2 y PR 3 siguen como dependencias de PR 5 |
-| Siguiente PR recomendado | Integrar PR 2, PR 3 y PR 4 antes de crear `feature/training-pipeline` |
+| Estado global | PR 5 listo para review sobre PR 4, con PR 2 y PR 3 integrados |
+| Siguiente PR recomendado | PR 6 - `feature/model-registry-promotion` desde PR 5 |
 | Riesgo abierto principal | `pre-commit run --all-files` no pudo completar localmente en PR1 porque el entorno no pudo descargar hooks desde GitHub |
 
 ### Regla de handoff entre agentes
@@ -126,7 +126,7 @@ La asignacion es flexible, pero el total queda balanceado: 3 PRs por persona.
 | 2 | `feature/ml-feature-store` | A | PR 1 | listo para review | feature store persistido y materializacion |
 | 3 | `feature/mlflow-tracking` | B | PR 1 | listo para review | MLflow local + tracking helpers |
 | 4 | `feature/prediction-api-contract` | C | PR 3 | listo para review | contrato API de prediccion y tests base |
-| 5 | `feature/training-pipeline` | A | PR 2 + PR 3 | pendiente | entrenamiento reproducible por `as_of_date` |
+| 5 | `feature/training-pipeline` | A | PR 2 + PR 3 + PR 4 | listo para review | entrenamiento reproducible por `as_of_date` |
 | 6 | `feature/model-registry-promotion` | B | PR 3 + PR 5 | pendiente | registro, validacion y promocion de modelos |
 | 7 | `feature/retraining-orchestration` | C | PR 2 + PR 5 + PR 6 | pendiente | retrain manual/recurrente con Dagster |
 | 8 | `feature/ml-pipeline-cicd` | A | PR 5 + PR 6 + PR 7 | pendiente | CI/CD de pipelines ML |
@@ -518,11 +518,24 @@ uv run --group ml pytest tests/test_training_dataset.py tests/test_training_pipe
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/training-pipeline`, apilada sobre PR 4 y con PR 2 mergeado
 * Comandos corridos:
+  * `.venv/bin/pytest tests/test_training_dataset.py tests/test_training_pipeline.py tests/test_feature_store.py -q`
+    -> 12 passed
+  * Black, flake8 y mypy sobre dataset, training, feature store y tests -> sin errores
+  * smoke real contra Postgres/MLflow pendiente porque el entorno local no tiene `uv`,
+    `dbt` ni `mlflow` instalados
 * Metricas registradas:
-* Run IDs de ejemplo:
+  * `mae`, `rmse`, `rows`
+  * parametros: `model_type=linear_regression`, `feature_count=1`
+  * artefacto: `model/model.json`
+* Run IDs de ejemplo: cubierto con `run-123` en el test de tracking; run local real
+  pendiente del stack de datos/MLflow
+* Decisiones:
+  * target: `gas_production_current` del siguiente snapshot mensual conocido
+  * no se agrega scikit-learn: OLS univariado determinista y portable es suficiente
+    para el baseline y evita una dependencia adicional
 * Siguiente PR desbloqueado: PR 6 y PR 7
 
 ---
