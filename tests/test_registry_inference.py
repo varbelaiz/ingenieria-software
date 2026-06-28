@@ -39,6 +39,7 @@ def _feature_row() -> FeatureRow:
 
 
 def test_registry_inference_uses_champion_and_exposes_traceability() -> None:
+    """Inference should use champion parameters and expose their metadata."""
     champion = RegisteredModel(
         name="gas-forecast",
         version="4",
@@ -48,7 +49,10 @@ def test_registry_inference_uses_champion_and_exposes_traceability() -> None:
     )
 
     class Registry:
+        """Return a deterministic champion model."""
+
         def load_champion(self) -> ResolvedModel:
+            """Resolve the configured champion."""
             return ResolvedModel(
                 metadata=champion,
                 model=LinearModel(
@@ -77,8 +81,13 @@ def test_registry_inference_uses_champion_and_exposes_traceability() -> None:
 
 
 def test_registry_inference_fails_clearly_without_champion() -> None:
+    """Inference should fail with a domain error when no champion exists."""
+
     class Registry:
+        """Represent a registry without a champion alias."""
+
         def load_champion(self) -> ResolvedModel:
+            """Raise the expected missing-champion error."""
             raise NoPromotedModelError("No champion model is registered")
 
     service = RegistryPredictionService(
@@ -97,6 +106,7 @@ def test_registry_inference_fails_clearly_without_champion() -> None:
 def test_prediction_api_returns_promoted_model_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """The prediction endpoint should expose promoted-model traceability."""
     champion = RegisteredModel(
         name="gas-forecast",
         version="4",
@@ -106,7 +116,10 @@ def test_prediction_api_returns_promoted_model_metadata(
     )
 
     class Registry:
+        """Return the promoted model used by the API test."""
+
         def load_champion(self) -> ResolvedModel:
+            """Resolve the configured promoted model."""
             return ResolvedModel(
                 metadata=champion,
                 model=LinearModel(
@@ -145,8 +158,13 @@ def test_prediction_api_returns_promoted_model_metadata(
 def test_current_model_api_returns_503_without_champion(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """The diagnostic endpoint should report unavailable model state."""
+
     class Registry:
+        """Represent a registry without a champion alias."""
+
         def load_champion(self) -> ResolvedModel:
+            """Raise the expected missing-champion error."""
             raise NoPromotedModelError("No champion model is registered")
 
     service = RegistryPredictionService(

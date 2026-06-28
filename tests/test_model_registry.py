@@ -8,30 +8,43 @@ def test_register_run_model_creates_version_and_candidate_alias() -> None:
     events: list[tuple[str, object]] = []
 
     class FakeModelVersion:
+        """Minimal MLflow model-version response."""
+
         version = "7"
         run_id = "run-123"
         source = "runs:/run-123/model/model.json"
 
     class FakeClient:
+        """Capture MLflow registry operations."""
+
         def create_registered_model(self, name: str) -> None:
+            """Capture registered-model creation."""
             events.append(("create_registered_model", name))
 
         def create_model_version(
             self, *, name: str, source: str, run_id: str
         ) -> FakeModelVersion:
+            """Capture and return model-version creation."""
             events.append(("create_model_version", (name, source, run_id)))
             return FakeModelVersion()
 
         def set_registered_model_alias(
             self, name: str, alias: str, version: str
         ) -> None:
+            """Capture alias assignment."""
             events.append(("set_alias", (name, alias, version)))
 
-        def get_run(self, run_id: str) -> object:
+        def get_run(self, _run_id: str) -> object:
+            """Return metrics associated with the registered run."""
+
             class Data:
+                """Minimal MLflow run-data response."""
+
                 metrics = {"mae": 4.0}
 
             class Run:
+                """Minimal MLflow run response."""
+
                 data = Data()
 
             return Run()

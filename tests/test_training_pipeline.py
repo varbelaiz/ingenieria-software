@@ -38,17 +38,22 @@ def test_train_dataset_logs_metrics_params_and_model_artifact(
     events: list[tuple[str, object]] = []
 
     class FakeRun:
+        """Capture training evidence without contacting MLflow."""
+
         run_id = "run-123"
 
         def log_params(self, params: Mapping[str, str | int | float | bool]) -> None:
+            """Capture logged model parameters."""
             events.append(("params", params))
 
         def log_metrics(self, metrics: Mapping[str, float]) -> None:
+            """Capture logged validation metrics."""
             events.append(("metrics", metrics))
 
         def log_artifact(
             self, local_path: str | Path, artifact_path: str | None = None
         ) -> None:
+            """Capture the serialized model artifact."""
             artifact = Path(local_path)
             events.append(("artifact_path", artifact_path))
             events.append(

@@ -20,17 +20,21 @@ class FakeRegistry:
     """In-memory registry surface used to observe alias changes."""
 
     def __init__(self, champion: RegisteredModel | None) -> None:
+        """Initialize the fake with an optional current champion."""
         self.champion = champion
         self.promoted_versions: list[str] = []
 
     def get_champion(self) -> RegisteredModel | None:
+        """Return the configured champion."""
         return self.champion
 
     def set_champion(self, version: str) -> None:
+        """Record the version selected for promotion."""
         self.promoted_versions.append(version)
 
 
 def test_candidate_below_threshold_and_better_than_champion_is_promoted() -> None:
+    """A qualifying candidate should replace the current champion."""
     registry = FakeRegistry(champion=_model("1", 12.0, "champion"))
 
     decision = promote_candidate(
@@ -44,6 +48,7 @@ def test_candidate_below_threshold_and_better_than_champion_is_promoted() -> Non
 
 
 def test_rejected_candidate_does_not_replace_champion() -> None:
+    """A worse candidate should leave the current champion unchanged."""
     registry = FakeRegistry(champion=_model("1", 7.0, "champion"))
 
     decision = promote_candidate(
@@ -54,10 +59,11 @@ def test_rejected_candidate_does_not_replace_champion() -> None:
 
     assert decision.status == "rejected"
     assert decision.reason == "candidate does not improve champion MAE"
-    assert registry.promoted_versions == []
+    assert not registry.promoted_versions
 
 
 def test_candidate_without_mae_is_rejected() -> None:
+    """A candidate without the required metric should be rejected."""
     registry = FakeRegistry(champion=None)
 
     decision = promote_candidate(
@@ -68,14 +74,18 @@ def test_candidate_without_mae_is_rejected() -> None:
 
     assert decision.status == "rejected"
     assert decision.reason == "candidate is missing MAE"
-    assert registry.promoted_versions == []
+    assert not registry.promoted_versions
 
 
 def test_register_and_promote_evaluates_the_new_candidate() -> None:
+    """The entrypoint should evaluate the version registered from the run."""
     candidate = _model("3", 6.0, "candidate")
 
     class Registry(FakeRegistry):
+        """Fake registry that returns the newly registered candidate."""
+
         def register_run_model(self, run_id: str) -> RegisteredModel:
+            """Return the candidate associated with the expected run."""
             assert run_id == "run-3"
             return candidate
 

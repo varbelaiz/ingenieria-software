@@ -1,12 +1,12 @@
 """Contract tests for Phase 3 prediction and model metadata endpoints."""
 
-from fastapi.testclient import TestClient
+import pytest
 
+from fastapi.testclient import TestClient
 from app.main import app
 from app.predictions import routes
 from ml.inference.service import BaselinePredictionService
 from tests import TEST_API_KEY
-import pytest
 
 
 client = TestClient(app)
