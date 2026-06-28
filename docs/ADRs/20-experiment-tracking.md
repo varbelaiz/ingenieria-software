@@ -1,8 +1,8 @@
 # ADR-20: Tracking de experimentos de machine learning
 
 ```
-status: Propuesto
-date: 2026-06-25
+status: Aceptado
+date: 2026-06-26
 decision-makers: Equipo de Desarrollo
 ```
 
@@ -68,4 +68,23 @@ terminaria recreando mal una parte de MLflow y haria mas debil la evidencia del 
 
 Confirmar en PR 3 con servicio MLflow local, helpers en `ml/training/tracking.py`, al
 menos un smoke test de registro de runs y un entrenamiento real registrando metricas.
+
+## Confirmacion PR 3
+
+PR 3 confirma la decision con:
+
+* grupo de dependencias `ml` con `mlflow`;
+* `docker-compose.ml.yml` con servicio local `mlflow` y volumen persistente para backend
+  SQLite y artefactos;
+* `.env.ml.example` con las variables compartidas `MLFLOW_TRACKING_URI`,
+  `MLFLOW_EXPERIMENT_NAME` y `MLFLOW_MODEL_NAME`;
+* helper `ml/training/tracking.py` para configurar tracking URI, experimento y tags
+  estandar de reproducibilidad;
+* smoke command `python -m ml.training.smoke_tracking` para registrar un run dummy con
+  parametros y metricas;
+* tests que validan el contrato sin requerir servidor MLflow vivo, incluyendo un store
+  local temporal basado en archivos.
+
+El entrenamiento real queda para PR 5; este PR solo deja la plataforma y el harness de
+tracking listos para ser consumidos por training y registry.
 
