@@ -157,8 +157,8 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install data dependencies
-        run: uv sync --group data --no-dev
+      - name: Install data and ML dependencies
+        run: uv sync --group data --group ml --no-dev
 
       - name: Install dbt packages
         run: uv run --group data dbt deps --project-dir data_platform/transform --profiles-dir data_platform/transform
@@ -167,7 +167,7 @@ jobs:
         run: uv run --group data dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform
 
       - name: Validate Dagster Definitions load
-        run: uv run --group data dagster definitions validate -m data_platform.orchestration
+        run: uv run --group data --group ml dagster definitions validate -m data_platform.orchestration
 
   datahub-recipe-validate:
     runs-on: ubuntu-latest
