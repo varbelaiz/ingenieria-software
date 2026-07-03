@@ -17,10 +17,10 @@ Cada PR debe actualizar esta seccion antes de cerrarse:
 
 | Campo | Valor |
 |-------|-------|
-| Ultima actualizacion | 2026-06-28 |
-| Branch base esperada | PR 3 integrado en `feature/prediction-api-contract` |
-| Estado global | PR 6 listo para review; ramas PR 4-6 publicadas en cadena |
-| Siguiente PR recomendado | PR 7 - `feature/retraining-orchestration` desde PR 6 |
+| Ultima actualizacion | 2026-07-03 |
+| Branch base esperada | cadena apilada PR 7 -> PR 8 -> PR 9 sobre `feature/model-registry-promotion` |
+| Estado global | los 9 PRs de la fase abiertos; PR 7-9 (#50, #51, #52) apilados y listos para review |
+| Siguiente PR recomendado | mergear la cadena en orden (#49 -> #50 -> #51 -> #52) hacia develop |
 | Riesgo abierto principal | `pre-commit run --all-files` no pudo completar localmente en PR1 porque el entorno no pudo descargar hooks desde GitHub |
 
 ### Regla de handoff entre agentes
@@ -685,11 +685,15 @@ docker compose --env-file .env.data -f docker-compose.data.yml up -d
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review (#50)
+* Branch real: `feature/retraining-orchestration` (apilada sobre `feature/model-registry-promotion`)
 * Comandos corridos:
-* Job/schedule creado:
-* Forma de trigger manual:
+  * `uv run --group data --group ml dagster definitions validate -m data_platform.orchestration` -> OK
+  * `uv run --group data --group ml pytest tests/test_ml_orchestration.py` -> 6 passed
+  * `uv run --group data --group ml pytest tests/test_orchestration_jobs.py tests/test_dbt_assets.py` -> 8 passed
+* Job/schedule creado: `train_model_job` + `ml_retraining_schedule` (mensual, dia 2 04:00 ART)
+* Forma de trigger manual: materializar la particion mensual de `train_model_job` desde la UI de Dagster
+* Archivos clave: `data_platform/orchestration/assets/ml.py`, `jobs.py`, `schedules.py`, `__init__.py`, `tests/test_ml_orchestration.py`
 * Siguiente PR desbloqueado: PR 8 y PR 9
 
 ---
@@ -753,11 +757,13 @@ Ademas, verificar el workflow en GitHub cuando se abra el PR.
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review (#51)
+* Branch real: `feature/ml-pipeline-cicd` (apilada sobre `feature/retraining-orchestration`)
 * Comandos corridos:
-* Workflows modificados:
-* Checks esperados en PR:
+  * `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"` -> OK
+  * smoke con warehouse en GitHub Actions; ruta feature store -> dataset -> training cubierta por `tests/test_ml_orchestration.py`
+* Workflows modificados: `.github/workflows/ci.yml` (dbt-test construye `ml_features`; nuevo job `ml-pipeline-smoke`; `--cov=ml`)
+* Checks esperados en PR: `dbt-test` (con data tests de `ml_features`), `ml-pipeline-smoke`, `dagster-validate`, `test`
 * Siguiente PR desbloqueado: PR 9
 
 ---
@@ -824,12 +830,14 @@ Despues llamar API con `curl`, PowerShell o `httpx` usando `X-API-Key`.
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review (#52)
+* Branch real: `feature/phase3-docs-demo` (apilada sobre `feature/ml-pipeline-cicd`)
 * Comandos corridos:
-* Evidencia lista para video:
-* Riesgos restantes:
-* Entrega final:
+  * `uv run --group data --group ml dagster definitions validate -m data_platform.orchestration` -> OK
+  * black / flake8 sobre los archivos tocados
+* Evidencia lista para video: guion en `docs/fase-3-video.md` (feature store, 2 runs MLflow, promocion, API en 2 condiciones, retrain en Dagster)
+* Archivos clave: `README.md` (seccion Fase 3), `docs/runbooks/ml-engineer.md`, `docs/fase-3-video.md`, ADR-23/ADR-24 (Confirmacion), `docs/index.md`
+* Entrega final: Fase 3 completa; los 9 PRs de la fase abiertos/apilados apuntando a develop
 
 ---
 
