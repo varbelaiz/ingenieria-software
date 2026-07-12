@@ -414,7 +414,15 @@ final exista. El objetivo es que API, tests y demo tengan una superficie estable
    * mientras PR 6 no exista, puede devolver prediccion baseline controlada.
    * dejar TODO claro o feature flag para conectar registry real despues.
 
-4. Tests con `tests.TEST_API_KEY`:
+4. Recomendacion no bloqueante para evaluar durante el diseño:
+   * definir como la API adoptaria un modelo nuevo cuando PR 6 promueva una version en
+     el registry.
+   * comparar al menos consulta dinamica del modelo vigente, cache con refresh y reinicio
+     controlado del servicio.
+   * no es necesario implementar el mecanismo definitivo en este PR; alcanza con evitar
+     que el contrato o el adapter temporal impidan incorporarlo despues.
+
+5. Tests con `tests.TEST_API_KEY`:
    * request exitoso.
    * auth requerida.
    * pozo inexistente o features faltantes.
@@ -434,12 +442,28 @@ uv run pytest tests/test_middleware.py
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/prediction-api-contract`, con PR 3 mergeado
 * Comandos corridos:
+  * `.venv/bin/pytest tests/test_predictions.py tests/test_middleware.py tests/test_forecast.py -q`
+    -> 19 passed
+  * `.venv/bin/python -m black --check ...`, `flake8` y `mypy` sobre los archivos
+    tocados -> sin errores
+  * `.venv/bin/pytest -q` -> bloqueado durante collection porque el entorno no tiene
+    instalados `mlflow` ni el ejecutable `dbt`; `uv` tampoco esta disponible en `PATH`
 * Endpoints agregados:
+  * `POST /api/v1/predictions`
+  * `GET /api/v1/models/current`
 * Contrato request/response:
-* Siguiente PR desbloqueado: PR 6
+  * request: `well_id`, `as_of_date`, `horizon_days` (1-365)
+  * response: prediccion numerica, metadata estable de modelo y `feature_as_of_date`
+  * adapter actual: `BaselinePredictionService`, reemplazable por la implementacion de
+    registry de PR 6 mediante el protocolo `PredictionService`
+* Archivos clave:
+  * `app/predictions/routes.py`
+  * `ml/inference/service.py`
+  * `tests/test_predictions.py`
+* Siguiente PR desbloqueado: PR 5 cuando PR 2, PR 3 y PR 4 esten integrados
 
 ---
 
@@ -670,6 +694,13 @@ servicio live de produccion.
 
 4. Documentar equivalentes locales:
    * comandos para correr los mismos checks fuera de GitHub.
+
+5. Recomendacion no bloqueante para evaluar segun el alcance disponible:
+   * complementar los checks de CI con una evidencia minima de CD, por ejemplo construir
+     y versionar una imagen o artefacto del pipeline y ejecutar un smoke deployment.
+   * no requiere publicar un servicio live en produccion; puede resolverse con un
+     artefacto del workflow o un despliegue efimero y reproducible.
+   * documentar la alternativa evaluada y el motivo si se decide no incorporarla.
 
 ### ADR asociado
 
