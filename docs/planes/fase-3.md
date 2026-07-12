@@ -17,11 +17,11 @@ Cada PR debe actualizar esta seccion antes de cerrarse:
 
 | Campo | Valor |
 |-------|-------|
-| Ultima actualizacion | 2026-06-28 |
-| Branch base esperada | PR 3 integrado en `feature/prediction-api-contract` |
-| Estado global | PR 4 listo para review; PR 2 y PR 3 siguen como dependencias de PR 5 |
-| Siguiente PR recomendado | Integrar PR 2, PR 3 y PR 4 antes de crear `feature/training-pipeline` |
-| Riesgo abierto principal | `pre-commit run --all-files` no pudo completar localmente en PR1 porque el entorno no pudo descargar hooks desde GitHub |
+| Ultima actualizacion | 2026-07-02 |
+| Branch base esperada | `develop` sincronizada con `origin/develop` |
+| Estado global | PR 1 a PR 6 abiertos en review (#44 a #49); PR 7 a PR 9 pendientes |
+| Siguiente PR recomendado | PR 7 - `feature/retraining-orchestration` (depende de PR 2 + PR 5 + PR 6) |
+| Riesgo abierto principal | `pre-commit run --all-files` no pudo completar porque el entorno no pudo descargar hooks desde GitHub |
 
 ### Regla de handoff entre agentes
 
@@ -96,9 +96,9 @@ GitHub Actions valida pipelines, tests, dbt/Dagster y smoke tests de ML.
 
 ## Estrategia de PRs
 
-Se planifican **9 PRs**, divisible por 3 personas. La regla es que cada PR sea revisable
-por separado y deje evidencia verificable. Evitar PRs gigantes que mezclen ADRs,
-infraestructura, training, API y video.
+Se planifican **9 PRs**. La regla es que cada PR sea revisable por separado y deje
+evidencia verificable. Evitar PRs gigantes que mezclen ADRs, infraestructura, training,
+API y video.
 
 ### Branching
 
@@ -108,36 +108,30 @@ infraestructura, training, API y video.
 * Mantener el orden de merge indicado en la tabla.
 * Antes de empezar: `git fetch` y verificar que `develop` este al dia con `origin/develop`.
 
-### Distribucion sugerida para 3 personas
-
-| Persona | PRs sugeridos | Foco |
-|---------|---------------|------|
-| A | PR 2, PR 5, PR 8 | feature store, dataset/training, CI/CD |
-| B | PR 3, PR 6, PR 9 | MLflow, registry/promocion, documentacion/demo |
-| C | PR 1, PR 4, PR 7 | foundation, API, retraining/orquestacion |
-
-La asignacion es flexible, pero el total queda balanceado: 3 PRs por persona.
-
 ## Matriz de PRs
 
-| PR | Branch | Owner sugerido | Depende de | Estado | Entrega principal |
-|----|--------|----------------|------------|--------|-------------------|
-| 1 | `feature/mlops-foundation` | C | `develop` | listo para review | estructura ML + ADRs iniciales + README arquitectura base |
-| 2 | `feature/ml-feature-store` | A | PR 1 | pendiente | feature store persistido y materializacion |
-| 3 | `feature/mlflow-tracking` | B | PR 1 | listo para review | MLflow local + tracking helpers |
-| 4 | `feature/prediction-api-contract` | C | PR 1 | pendiente | contrato API de prediccion y tests base |
-| 5 | `feature/training-pipeline` | A | PR 2 + PR 3 | pendiente | entrenamiento reproducible por `as_of_date` |
-| 6 | `feature/model-registry-promotion` | B | PR 3 + PR 5 | pendiente | registro, validacion y promocion de modelos |
-| 7 | `feature/retraining-orchestration` | C | PR 2 + PR 5 + PR 6 | pendiente | retrain manual/recurrente con Dagster |
-| 8 | `feature/ml-pipeline-cicd` | A | PR 5 + PR 6 + PR 7 | pendiente | CI/CD de pipelines ML |
-| 9 | `feature/phase3-docs-demo` | B | PR 1-8 | pendiente | README final, runbook y guion/evidencia de video |
+Titulo de PR sugerido: formato `feat(ml): <descripcion>`, consistente con la convencion
+de commits del repositorio.
+
+| PR | Branch | Owner | Depende de | Estado | Entrega principal |
+|----|--------|-------|------------|--------|-------------------|
+| 1 | `feature/mlops-foundation` | tomasbenavidez | `develop` | mergeado (#44) | estructura ML + ADRs iniciales + README arquitectura base |
+| 2 | `feature/ml-feature-store` | tomasbenavidez | PR 1 | mergeado (#45) | feature store persistido y materializacion |
+| 3 | `feature/mlflow-tracking` | tomasbenavidez | PR 1 | mergeado (#46) | MLflow local + tracking helpers |
+| 4 | `feature/prediction-api-contract` | famatodlr | PR 1 | en review (#47) | contrato API de prediccion y tests base |
+| 5 | `feature/training-pipeline` | famatodlr | PR 2 + PR 3 | en review (#48) | entrenamiento reproducible por `as_of_date` |
+| 6 | `feature/model-registry-promotion` | famatodlr | PR 3 + PR 5 | en review (#49) | registro, validacion y promocion de modelos |
+| 7 | `feature/retraining-orchestration` | por asignar | PR 2 + PR 5 + PR 6 | pendiente | retrain manual/recurrente con Dagster |
+| 8 | `feature/ml-pipeline-cicd` | por asignar | PR 5 + PR 6 + PR 7 | pendiente | CI/CD de pipelines ML |
+| 9 | `feature/phase3-docs-demo` | por asignar | PR 1-8 | pendiente | README final, runbook y guion/evidencia de video |
 
 ---
 
 ## PR 1: `feature/mlops-foundation`
 
 **Branch:** `feature/mlops-foundation` desde `develop` actualizado
-**Owner sugerido:** C
+**Titulo PR:** `feat(ml): base MLOps, scaffolding del paquete ml y ADRs de Fase 3`
+**Owner:** tomasbenavidez (#44)
 **Descripcion:** Cimientos documentales y estructura minima para que los otros PRs puedan
 trabajar en paralelo sin inventar carpetas ni nombres.
 
@@ -220,7 +214,8 @@ archivos tocados, y anotar el bloqueo en este plan.
 ## PR 2: `feature/ml-feature-store`
 
 **Branch:** `feature/ml-feature-store` desde PR 1 o `develop` si PR 1 ya fue mergeado
-**Owner sugerido:** A
+**Titulo PR:** `feat(ml): feature store persistido en Postgres`
+**Owner:** tomasbenavidez (#45)
 **Descripcion:** Persistir features de inferencia/entrenamiento en Postgres, reusando el
 warehouse y los modelos gold existentes.
 
@@ -281,19 +276,33 @@ uv run --group data dbt build --select ml_features --project-dir data_platform/t
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/ml-feature-store`
 * Comandos corridos:
+  * `$env:UV_CACHE_DIR='.uv-cache'; $env:PYTEST_ADDOPTS='-p no:cacheprovider'; uv run pytest tests/test_feature_store.py` -> RED inicial: `ModuleNotFoundError: No module named 'ml.features.store'`
+  * `$env:UV_CACHE_DIR='.uv-cache'; $env:PYTEST_ADDOPTS='-p no:cacheprovider'; uv run pytest tests/test_feature_store.py` -> RED dbt: 2 failures por `FileNotFoundError` de `data_platform/transform/models/ml_features/well_monthly_features.sql`
+  * `$env:UV_CACHE_DIR='.uv-cache'; $env:PYTEST_ADDOPTS='-p no:cacheprovider'; uv run pytest tests/test_feature_store.py` -> 7 passed
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run black --config .pre-commit/.black.toml --check ml/features/store.py tests/test_feature_store.py` -> passed
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run flake8 --config .pre-commit/.flake8 ml/features/store.py tests/test_feature_store.py` -> passed
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run pylint --rcfile .pre-commit/.pylintrc --persistent=n ml/features/store.py tests/test_feature_store.py` -> 10.00/10
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run mypy --config-file .pre-commit/mypy.ini ml/features/store.py tests/test_feature_store.py` -> success
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run --group data dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform` -> passed con warning existente de config path `models.ingenieria_software.bronze` sin recursos
 * Tablas/modelos creados:
-* Funcion publica principal:
-* Siguiente PR desbloqueado: PR 5
+  * `data_platform/transform/models/ml_features/well_monthly_features.sql`
+  * `data_platform/transform/models/ml_features/_ml_features__models.yml`
+* Funcion publica principal: `FeatureStore.get_features()` con `PostgresFeatureRepository.lookup_features()`
+* Decisiones/desviaciones:
+  * Materializacion PR2 via dbt incremental; Dagster hook queda para PR7/orquestacion.
+  * No se ejecuto `dbt build` contra warehouse live para evitar mutaciones fuera del alcance de los tests locales.
+* Siguiente PR desbloqueado: PR 5 cuando PR 3 tambien este integrado
 
 ---
 
 ## PR 3: `feature/mlflow-tracking`
 
 **Branch:** `feature/mlflow-tracking` desde PR 1 o `develop` si PR 1 ya fue mergeado
-**Owner sugerido:** B
+**Titulo PR:** `feat(ml): tracking de experimentos con MLflow`
+**Owner:** tomasbenavidez (#46)
 **Descripcion:** Levantar plataforma de tracking de experimentos y helpers para registrar
 runs, parametros, metricas y artefactos.
 
@@ -380,7 +389,8 @@ Adaptar nombres si se decide no crear grupo `ml` o compose separado.
 ## PR 4: `feature/prediction-api-contract`
 
 **Branch:** `feature/prediction-api-contract` desde PR 1 o `develop` si PR 1 ya fue mergeado
-**Owner sugerido:** C
+**Titulo PR:** `feat(ml): contrato REST para predicciones`
+**Owner:** famatodlr (#47)
 **Descripcion:** Definir el contrato REST de predicciones ML sin esperar a que el modelo
 final exista. El objetivo es que API, tests y demo tengan una superficie estable.
 
@@ -460,7 +470,8 @@ uv run pytest tests/test_middleware.py
 ## PR 5: `feature/training-pipeline`
 
 **Branch:** `feature/training-pipeline` desde PR 2 + PR 3 integrados o apilada sobre ambos
-**Owner sugerido:** A
+**Titulo PR:** `feat(ml): pipeline reproducible de entrenamiento`
+**Owner:** famatodlr (#48)
 **Descripcion:** Entrenamiento reproducible para un `as_of_date`, leyendo desde feature
 store y registrando runs reales en MLflow.
 
@@ -517,7 +528,8 @@ uv run --group ml pytest tests/test_training_dataset.py tests/test_training_pipe
 ## PR 6: `feature/model-registry-promotion`
 
 **Branch:** `feature/model-registry-promotion` desde PR 3 + PR 5 integrados
-**Owner sugerido:** B
+**Titulo PR:** `feat(ml): registry, promocion de modelos e inferencia champion`
+**Owner:** famatodlr (#49)
 **Descripcion:** Registrar modelos entrenados, validar criterios minimos y conectar la
 API al modelo promovido.
 
@@ -586,7 +598,8 @@ uv run uvicorn app.main:app --reload
 ## PR 7: `feature/retraining-orchestration`
 
 **Branch:** `feature/retraining-orchestration` desde PR 2 + PR 5 + PR 6 integrados
-**Owner sugerido:** C
+**Titulo PR:** `feat(ml): orquestacion de retraining con Dagster`
+**Owner:** por asignar
 **Descripcion:** Orquestar materializacion de features, training, validacion y promocion
 con Dagster, permitiendo retrain manual para un dia dado y schedule recurrente.
 
@@ -657,7 +670,8 @@ docker compose --env-file .env.data -f docker-compose.data.yml up -d
 ## PR 8: `feature/ml-pipeline-cicd`
 
 **Branch:** `feature/ml-pipeline-cicd` desde PR 5 + PR 6 + PR 7 integrados
-**Owner sugerido:** A
+**Titulo PR:** `feat(ml): CI/CD de pipelines ML`
+**Owner:** por asignar
 **Descripcion:** Validar automaticamente los pipelines de ML en CI/CD sin requerir un
 servicio live de produccion.
 
@@ -725,7 +739,8 @@ Ademas, verificar el workflow en GitHub cuando se abra el PR.
 ## PR 9: `feature/phase3-docs-demo`
 
 **Branch:** `feature/phase3-docs-demo` desde todos los PRs previos integrados
-**Owner sugerido:** B
+**Titulo PR:** `feat(ml): documentacion final, runbook y demo de Fase 3`
+**Owner:** por asignar
 **Descripcion:** Cierre de documentacion, runbook de demo y guion del video de 5 a 10
 minutos.
 
