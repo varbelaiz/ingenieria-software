@@ -117,7 +117,7 @@ de commits del repositorio.
 |----|--------|-------|------------|--------|-------------------|
 | 1 | `feature/mlops-foundation` | tomasbenavidez | `develop` | mergeado (#44) | estructura ML + ADRs iniciales + README arquitectura base |
 | 2 | `feature/ml-feature-store` | tomasbenavidez | PR 1 | mergeado (#45) | feature store persistido y materializacion |
-| 3 | `feature/mlflow-tracking` | tomasbenavidez | PR 1 | en review (#46) | MLflow local + tracking helpers |
+| 3 | `feature/mlflow-tracking` | tomasbenavidez | PR 1 | mergeado (#46) | MLflow local + tracking helpers |
 | 4 | `feature/prediction-api-contract` | famatodlr | PR 1 | en review (#47) | contrato API de prediccion y tests base |
 | 5 | `feature/training-pipeline` | famatodlr | PR 2 + PR 3 | en review (#48) | entrenamiento reproducible por `as_of_date` |
 | 6 | `feature/model-registry-promotion` | famatodlr | PR 3 + PR 5 | en review (#49) | registro, validacion y promocion de modelos |
@@ -363,11 +363,25 @@ Adaptar nombres si se decide no crear grupo `ml` o compose separado.
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/mlflow-tracking`
 * Comandos corridos:
-* URL local MLflow:
-* Funcion publica principal:
+  * `$env:UV_CACHE_DIR='.uv-cache'; $env:PYTEST_ADDOPTS='-p no:cacheprovider'; uv run --group ml pytest tests/test_mlflow_tracking.py` -> 2 passed, 1 error por `PermissionError` creando `D:\WORKSPACE\SYSTEM\temp\pytest-of-tomas`
+  * `$env:UV_CACHE_DIR='.uv-cache'; $env:PYTEST_ADDOPTS='-p no:cacheprovider'; $env:TMP='.tmp'; $env:TEMP='.tmp'; uv run --group ml pytest tests/test_mlflow_tracking.py` -> 3 passed
+* URL local MLflow: `http://localhost:5000` via `docker compose -f docker-compose.ml.yml up -d`
+* Funcion publica principal: `start_tracked_run()` y `run_smoke_tracking()`
+* Archivos clave:
+  * `pyproject.toml`
+  * `uv.lock`
+  * `docker-compose.ml.yml`
+  * `.env.ml.example`
+  * `ml/training/tracking.py`
+  * `ml/training/smoke_tracking.py`
+  * `tests/test_mlflow_tracking.py`
+  * `docs/ADRs/20-experiment-tracking.md`
+* Decisiones/desviaciones:
+  * Tests usan `TMP/TEMP=.tmp` por permisos locales sobre `D:\WORKSPACE\SYSTEM\temp`.
+  * No se implementa training real en PR3; queda para PR5.
 * Siguiente PR desbloqueado: PR 5 y PR 6
 
 ---

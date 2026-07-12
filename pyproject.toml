@@ -33,5 +33,9 @@ data = [
     "requests>=2.31,<3.0",
 ]
 
+ml = [
+    "mlflow>=3.1.0,<4.0.0",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

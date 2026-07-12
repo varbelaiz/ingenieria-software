@@ -52,6 +52,7 @@ coverage.xml
 cover/
 .pre-commit-cache/
 .uv-cache/
+.tmp/
 
 # Translations
 *.mo
@@ -223,4 +224,9 @@ dagster_home/
 # Data platform env
 .env.data
 .env.datahub
+
+# MLflow local stores
+mlruns/
+mlartifacts/
+.env.ml
 AGENTS.md
