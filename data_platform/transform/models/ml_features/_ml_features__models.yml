@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: well_monthly_features
+    description: "Feature store mensual por pozo y fecha de corte para training e inferencia."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - well_id
+              - as_of_date
+    columns:
+      - name: well_id
+        description: "Identificador natural del pozo."
+        data_tests:
+          - not_null
+      - name: as_of_date
+        description: "Fecha de corte usada para construir las features sin leakage temporal."
+        data_tests:
+          - not_null
+      - name: gas_production_current
+        description: "Produccion de gas del periodo de corte."
+        data_tests:
+          - not_null
+      - name: gas_production_avg_3m
+        description: "Media movil de gas en los ultimos tres meses disponibles."
+        data_tests:
+          - not_null
+      - name: gas_production_avg_6m
+        description: "Media movil de gas en los ultimos seis meses disponibles."
+        data_tests:
+          - not_null
+      - name: gas_production_trend_3m
+        description: "Diferencia entre produccion actual de gas y media movil de tres meses."
+        data_tests:
+          - not_null
+      - name: oil_production_current
+        description: "Produccion de petroleo del periodo de corte."
+        data_tests:
+          - not_null
+      - name: water_production_current
+        description: "Produccion de agua del periodo de corte."
+        data_tests:
+          - not_null
+      - name: producing_days_available
+        description: "Dias de produccion disponibles en el periodo de corte."
+        data_tests:
+          - not_null
+      - name: production_months_available
+        description: "Cantidad de meses historicos usados hasta la fecha de corte."
+        data_tests:
+          - not_null
+      - name: formation
+        description: "Formacion productiva vigente del pozo."
+        data_tests:
+          - not_null
+      - name: basin
+        description: "Cuenca vigente del pozo."
+        data_tests:
+          - not_null
+      - name: resource_type
+        description: "Tipo de recurso vigente del pozo."
+        data_tests:
+          - not_null

@@ -115,8 +115,8 @@ de commits del repositorio.
 
 | PR | Branch | Owner | Depende de | Estado | Entrega principal |
 |----|--------|-------|------------|--------|-------------------|
-| 1 | `feature/mlops-foundation` | tomasbenavidez | `develop` | en review (#44) | estructura ML + ADRs iniciales + README arquitectura base |
-| 2 | `feature/ml-feature-store` | tomasbenavidez | PR 1 | en review (#45) | feature store persistido y materializacion |
+| 1 | `feature/mlops-foundation` | tomasbenavidez | `develop` | mergeado (#44) | estructura ML + ADRs iniciales + README arquitectura base |
+| 2 | `feature/ml-feature-store` | tomasbenavidez | PR 1 | mergeado (#45) | feature store persistido y materializacion |
 | 3 | `feature/mlflow-tracking` | tomasbenavidez | PR 1 | en review (#46) | MLflow local + tracking helpers |
 | 4 | `feature/prediction-api-contract` | famatodlr | PR 1 | en review (#47) | contrato API de prediccion y tests base |
 | 5 | `feature/training-pipeline` | famatodlr | PR 2 + PR 3 | en review (#48) | entrenamiento reproducible por `as_of_date` |
@@ -276,12 +276,25 @@ uv run --group data dbt build --select ml_features --project-dir data_platform/t
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/ml-feature-store`
 * Comandos corridos:
+  * `$env:UV_CACHE_DIR='.uv-cache'; $env:PYTEST_ADDOPTS='-p no:cacheprovider'; uv run pytest tests/test_feature_store.py` -> RED inicial: `ModuleNotFoundError: No module named 'ml.features.store'`
+  * `$env:UV_CACHE_DIR='.uv-cache'; $env:PYTEST_ADDOPTS='-p no:cacheprovider'; uv run pytest tests/test_feature_store.py` -> RED dbt: 2 failures por `FileNotFoundError` de `data_platform/transform/models/ml_features/well_monthly_features.sql`
+  * `$env:UV_CACHE_DIR='.uv-cache'; $env:PYTEST_ADDOPTS='-p no:cacheprovider'; uv run pytest tests/test_feature_store.py` -> 7 passed
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run black --config .pre-commit/.black.toml --check ml/features/store.py tests/test_feature_store.py` -> passed
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run flake8 --config .pre-commit/.flake8 ml/features/store.py tests/test_feature_store.py` -> passed
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run pylint --rcfile .pre-commit/.pylintrc --persistent=n ml/features/store.py tests/test_feature_store.py` -> 10.00/10
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run mypy --config-file .pre-commit/mypy.ini ml/features/store.py tests/test_feature_store.py` -> success
+  * `$env:UV_CACHE_DIR='.uv-cache'; uv run --group data dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform` -> passed con warning existente de config path `models.ingenieria_software.bronze` sin recursos
 * Tablas/modelos creados:
-* Funcion publica principal:
-* Siguiente PR desbloqueado: PR 5
+  * `data_platform/transform/models/ml_features/well_monthly_features.sql`
+  * `data_platform/transform/models/ml_features/_ml_features__models.yml`
+* Funcion publica principal: `FeatureStore.get_features()` con `PostgresFeatureRepository.lookup_features()`
+* Decisiones/desviaciones:
+  * Materializacion PR2 via dbt incremental; Dagster hook queda para PR7/orquestacion.
+  * No se ejecuto `dbt build` contra warehouse live para evitar mutaciones fuera del alcance de los tests locales.
+* Siguiente PR desbloqueado: PR 5 cuando PR 3 tambien este integrado
 
 ---
 
