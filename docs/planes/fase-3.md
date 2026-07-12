@@ -118,8 +118,8 @@ de commits del repositorio.
 | 1 | `feature/mlops-foundation` | tomasbenavidez | `develop` | mergeado (#44) | estructura ML + ADRs iniciales + README arquitectura base |
 | 2 | `feature/ml-feature-store` | tomasbenavidez | PR 1 | mergeado (#45) | feature store persistido y materializacion |
 | 3 | `feature/mlflow-tracking` | tomasbenavidez | PR 1 | mergeado (#46) | MLflow local + tracking helpers |
-| 4 | `feature/prediction-api-contract` | famatodlr | PR 1 | en review (#47) | contrato API de prediccion y tests base |
-| 5 | `feature/training-pipeline` | famatodlr | PR 2 + PR 3 | en review (#48) | entrenamiento reproducible por `as_of_date` |
+| 4 | `feature/prediction-api-contract` | famatodlr | PR 1 | mergeado (#47) | contrato API de prediccion y tests base |
+| 5 | `feature/training-pipeline` | famatodlr | PR 2 + PR 3 | mergeado (#48) | entrenamiento reproducible por `as_of_date` |
 | 6 | `feature/model-registry-promotion` | famatodlr | PR 3 + PR 5 | en review (#49) | registro, validacion y promocion de modelos |
 | 7 | `feature/retraining-orchestration` | por asignar | PR 2 + PR 5 + PR 6 | pendiente | retrain manual/recurrente con Dagster |
 | 8 | `feature/ml-pipeline-cicd` | por asignar | PR 5 + PR 6 + PR 7 | pendiente | CI/CD de pipelines ML |
@@ -516,11 +516,24 @@ uv run --group ml pytest tests/test_training_dataset.py tests/test_training_pipe
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/training-pipeline`, apilada sobre PR 4 y con PR 2 mergeado
 * Comandos corridos:
+  * `.venv/bin/pytest tests/test_training_dataset.py tests/test_training_pipeline.py tests/test_feature_store.py -q`
+    -> 12 passed
+  * Black, flake8 y mypy sobre dataset, training, feature store y tests -> sin errores
+  * smoke real contra Postgres/MLflow pendiente porque el entorno local no tiene `uv`,
+    `dbt` ni `mlflow` instalados
 * Metricas registradas:
-* Run IDs de ejemplo:
+  * `mae`, `rmse`, `rows`
+  * parametros: `model_type=linear_regression`, `feature_count=1`
+  * artefacto: `model/model.json`
+* Run IDs de ejemplo: cubierto con `run-123` en el test de tracking; run local real
+  pendiente del stack de datos/MLflow
+* Decisiones:
+  * target: `gas_production_current` del siguiente snapshot mensual conocido
+  * no se agrega scikit-learn: OLS univariado determinista y portable es suficiente
+    para el baseline y evita una dependencia adicional
 * Siguiente PR desbloqueado: PR 6 y PR 7
 
 ---
