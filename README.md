@@ -140,7 +140,7 @@ trunque silenciosamente al crecer los datos. Las credenciales por defecto
 (`METABASE_ADMIN_*`, `MB_ENCRYPTION_SECRET_KEY`, `metabase_ro`) son solo para uso local:
 rotalas y usa un secreto aleatorio real en cualquier despliegue compartido.
 
-## Plataforma ML Engineering (Fase 3 - en desarrollo)
+## Plataforma ML Engineering (Fase 3)
 
 La Fase 3 integra el servicio de predicciones con un flujo reproducible de ML Engineering.
 El objetivo es que las features usadas por entrenamiento e inferencia queden persistidas,
@@ -174,9 +174,46 @@ por ADRs comparativos:
 - [ADR-23](docs/ADRs/23-training-orchestration.md) — orquestacion de training/retraining
 - [ADR-24](docs/ADRs/24-ml-pipeline-cicd.md) — CI/CD de pipelines ML
 
-La entrega de esta fase no requiere servicio live en produccion. La demostracion final se
-enfoca en evidencia local: runs con metricas en MLflow, llamadas a la API con distintas
-condiciones, modelo vigente registrado y trigger manual/recurrente de retraining.
+### Feature store poblado aguas arriba del training
+
+En el diagrama de la consigna el "Pre-proc" alimenta al feature store desde el pipeline de
+training. En esta implementacion el feature store se materializa **aguas arriba** con dbt
+(modelo `ml_features.well_monthly_features`, alimentado por gold) y tanto el training como la
+inferencia leen del mismo store por `well_id` + `as_of_date`. Se eligio asi a proposito: al
+compartir exactamente la misma fuente de features se elimina el train/serve skew, que es el
+riesgo principal que motiva tener un feature store. El "Pre-proc" del diagrama se mapea, en
+concreto, a la materializacion del modelo dbt `ml_features`.
+
+### Orquestacion y retraining
+
+El retraining corre como assets de Dagster particionados por mes (`ml_trained_model` ->
+`ml_promoted_model`) dentro de `train_model_job`, con el schedule `ml_retraining_schedule`
+(mensual). Reentrenar para un dia dado equivale a materializar esa particion:
+
+```bash
+docker compose --env-file .env.data -f docker-compose.data.yml up -d
+docker compose -f docker-compose.ml.yml up -d   # MLflow local
+# En la UI de Dagster (http://localhost:3001): lanzar train_model_job para el as_of_date
+# o, por CLI, entrenar y promover un dia puntual:
+uv run --group ml python -m ml.training.train --as-of-date 2024-12-31
+uv run --group ml python -m ml.registry.promote --run-id <RUN_ID>
+uv run uvicorn app.main:app --reload
+```
+
+El paso a paso completo (levantar stack, materializar features, entrenar, ver runs, promover,
+llamar la API y disparar retrain) esta en el
+[runbook de ML Engineer](docs/runbooks/ml-engineer.md).
+
+### Entrega sin servicio live
+
+La entrega de esta fase no requiere servicio live en produccion. No hay, por lo tanto, un
+despliegue de inferencia recurrente: el "despliegue" de los pipelines ML se materializa como
+las Definitions de Dagster empaquetadas en la imagen de datos mas la validacion en CI/CD
+(build y data tests del feature store, smoke de training punta a punta y validacion de
+Definitions; ver [ADR-24](docs/ADRs/24-ml-pipeline-cicd.md)). La demostracion final se enfoca
+en evidencia local: runs con metricas en MLflow, llamadas a la API con distintas condiciones,
+modelo vigente registrado y trigger manual/recurrente de retraining (ver
+[guion del video](docs/fase-3-video.md)).
 ## Plataforma de datos (Dagster)
 
 El pipeline corre como un grafo de assets de Dagster: los assets de bronze

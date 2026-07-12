@@ -61,3 +61,19 @@ y ejecutar de forma reproducible.
 Confirmar en PR 8 con jobs CI de ML, smoke training, validacion de Dagster definitions,
 tests de registry/API y documentacion de comandos locales equivalentes.
 
+## Confirmacion PR 8
+
+Confirmado en PR 8 con cambios en `.github/workflows/ci.yml`:
+
+* el job `dbt-test` construye y testea el modelo `ml_features` junto con silver y gold
+  (`dbt build --select silver gold ml_features`), corriendo sus data tests dbt (`not_null`,
+  `unique_combination_of_columns`) contra el Postgres del CI;
+* nuevo job `ml-pipeline-smoke`: seed bronze -> `dbt build` de silver/gold/ml_features ->
+  `python -m ml.training.train --as-of-date 2024-12-31` leyendo del feature store persistido
+  con MLflow file-store (sin server) -> tests de orquestacion ML;
+* el job `test` mide cobertura del paquete `ml` (`--cov=ml`);
+* la validacion de Dagster definitions (`dagster-validate`) instala el grupo `ml` porque el
+  modulo de orquestacion ahora importa `ml.*`.
+
+Los comandos locales equivalentes estan documentados en `docs/runbooks/ml-engineer.md`.
+

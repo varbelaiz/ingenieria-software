@@ -59,3 +59,19 @@ pipelines, no como orquestador principal de ML.
 Confirmar en PR 7 con `train_model_job`, schedule recurrente, config por `as_of_date`,
 validacion de definitions y runbook de trigger manual.
 
+## Confirmacion PR 7
+
+Confirmado en PR 7 con:
+
+* `data_platform/orchestration/assets/ml.py`: assets particionados por mes
+  `ml_trained_model` y `ml_promoted_model`, downstream del modelo dbt `ml_features`. El
+  training lee point-in-time del feature store persistido, registra el run en MLflow y la
+  promocion reutiliza la politica de MAE de ADR-22.
+* `train_model_job` (`data_platform/orchestration/jobs.py`) y `ml_retraining_schedule`
+  (`data_platform/orchestration/schedules.py`, mensual, dia 2 a las 04:00 ART). Retrain
+  para un `as_of_date` dado = materializar esa particion (manual desde la UI de Dagster).
+* El job de datos excluye el grupo `ml` para no reentrenar como efecto colateral.
+* `tests/test_ml_orchestration.py`: wiring de assets/job/schedule/deps y smoke de
+  materializacion punta a punta.
+* Runbook de trigger manual en `docs/runbooks/ml-engineer.md`.
+
