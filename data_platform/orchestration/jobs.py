@@ -12,7 +12,10 @@ from dagster import (
 )
 from dagster._core.errors import DagsterInvalidPropertyError
 
+from data_platform.orchestration.assets.ml import ml_trained_model, ml_promoted_model
+
 ALERT_WEBHOOK_ENV = "DATA_QUALITY_ALERT_WEBHOOK_URL"
+ML_GROUP = "ml"
 
 
 def _safe_context_value(context: HookContext, attribute: str, default: str) -> str:
@@ -82,6 +85,11 @@ def data_quality_failure_hook(context: HookContext) -> None:
 
 end_to_end_data_job = define_asset_job(
     name="end_to_end_data_job",
-    selection=AssetSelection.all(),
+    selection=AssetSelection.all() - AssetSelection.groups(ML_GROUP),
     hooks={data_quality_failure_hook},
+)
+
+train_model_job = define_asset_job(
+    name="train_model_job",
+    selection=AssetSelection.assets(ml_trained_model, ml_promoted_model),
 )

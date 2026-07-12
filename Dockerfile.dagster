@@ -11,11 +11,14 @@ ENV PATH="/opt/dagster/app/.venv/bin:${PATH}"
 RUN pip install uv --no-cache-dir
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --group data --no-dev --frozen
+RUN uv sync --group data --group ml --no-dev --frozen
 RUN dagster-webserver --help >/dev/null && dagster-daemon --help >/dev/null
 
 COPY workspace.yaml ./
 COPY data_platform/ ./data_platform/
+# El paquete ml/ lo consumen los assets de orquestacion ML (ml_trained_model /
+# ml_promoted_model) via `from ml.training...`. Sin esto: ModuleNotFoundError.
+COPY ml/ ./ml/
 # Generate the dbt manifest at build time so @dbt_assets loads without a DB at runtime.
 RUN dbt deps --project-dir data_platform/transform --profiles-dir data_platform/transform \
  && dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform

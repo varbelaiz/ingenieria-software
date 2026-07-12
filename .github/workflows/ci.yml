@@ -49,10 +49,10 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --group ml
 
       - name: Run tests with coverage
-        run: uv run pytest --cov=app --cov-report=term-missing
+        run: uv run pytest --cov=app --cov=ml --cov-report=term-missing
 
   data-extraction-test:
     runs-on: ubuntu-latest
@@ -157,8 +157,8 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install data dependencies
-        run: uv sync --group data --no-dev
+      - name: Install data and ML dependencies
+        run: uv sync --group data --group ml --no-dev
 
       - name: Install dbt packages
         run: uv run --group data dbt deps --project-dir data_platform/transform --profiles-dir data_platform/transform
@@ -167,7 +167,7 @@ jobs:
         run: uv run --group data dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform
 
       - name: Validate Dagster Definitions load
-        run: uv run --group data dagster definitions validate -m data_platform.orchestration
+        run: uv run --group data --group ml dagster definitions validate -m data_platform.orchestration
 
   datahub-recipe-validate:
     runs-on: ubuntu-latest
@@ -301,8 +301,8 @@ jobs:
       - name: Validate source freshness
         run: uv run --group data dbt source freshness --project-dir data_platform/transform --profiles-dir data_platform/transform
 
-      - name: Build silver and gold models with quality gates
-        run: uv run --group data dbt build --select silver gold --project-dir data_platform/transform --profiles-dir data_platform/transform
+      - name: Build silver, gold and ML feature models with quality gates
+        run: uv run --group data dbt build --select silver gold ml_features --project-dir data_platform/transform --profiles-dir data_platform/transform
 
       - name: Run data quality tests
         env:
@@ -311,6 +311,71 @@ jobs:
 
       - name: Validate Metabase card SQL against gold
         run: uv run --group data pytest tests/test_metabase_cards_sql.py
+
+  ml-pipeline-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      warehouse:
+        image: postgres:16
+        env:
+          POSTGRES_USER: warehouse
+          POSTGRES_PASSWORD: warehouse
+          POSTGRES_DB: warehouse
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U warehouse"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      WAREHOUSE_HOST: localhost
+      WAREHOUSE_PORT: "5433"
+      WAREHOUSE_USER: warehouse
+      WAREHOUSE_PASSWORD: warehouse
+      WAREHOUSE_DB: warehouse
+      DBT_WAREHOUSE_HOST: localhost
+      DBT_WAREHOUSE_PORT: "5433"
+      DBT_WAREHOUSE_USER: warehouse
+      DBT_WAREHOUSE_PASSWORD: warehouse
+      DBT_WAREHOUSE_DB: warehouse
+      MLFLOW_TRACKING_URI: "file:./mlruns"
+      MLFLOW_ALLOW_FILE_STORE: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install data and ML dependencies
+        run: uv sync --group data --group ml
+
+      - name: Install dbt packages
+        run: uv run --group data dbt deps --project-dir data_platform/transform --profiles-dir data_platform/transform
+
+      - name: Generate dbt manifest for dagster-dbt
+        run: uv run --group data dbt parse --project-dir data_platform/transform --profiles-dir data_platform/transform
+
+      - name: Seed bronze fixtures
+        run: uv run --group data python -m data_platform.ci.seed_bronze
+
+      - name: Materialize silver, gold and ML feature store
+        run: uv run --group data dbt build --select silver gold ml_features --project-dir data_platform/transform --profiles-dir data_platform/transform
+
+      - name: Smoke train from the persisted feature store
+        run: uv run --group ml python -m ml.training.train --as-of-date 2024-12-31
+
+      - name: Run ML orchestration tests
+        run: uv run --group data --group ml pytest tests/test_ml_orchestration.py tests/test_orchestration_jobs.py tests/test_dbt_assets.py
 
   metabase-e2e:
     runs-on: ubuntu-latest
