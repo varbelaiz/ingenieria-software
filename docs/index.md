@@ -13,5 +13,6 @@
 | [Load Testing](load-testing.md) | Tráfico sintético con Locust, presets y ejecución |
 | [Gobierno de datos](governance.md) | Quickstart local de DataHub para catalogo y gobierno |
 | [Ops](ops.md) | Deploy, secretos y monitoreo operativo en alto nivel |
+| [Plan Fase 3](planes/fase-3.md) | Plan vivo de PRs, ADRs y handoff para ML Engineering |
 | [Runbook de Data Engineer](runbooks/data-engineer.md) | Reproceso histórico de particiones, verificación de idempotencia y revisión de resultados |
 | [Runbook de BI User](runbooks/bi-user.md) | Validar frescura y calidad (quality_marks + DataHub) antes de publicar un reporte |

@@ -50,6 +50,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+.pre-commit-cache/
+.uv-cache/
 
 # Translations
 *.mo
