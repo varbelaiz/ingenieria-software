@@ -1,8 +1,8 @@
 # ADR-21: Feature store persistido para entrenamiento e inferencia
 
 ```
-status: Propuesto
-date: 2026-06-25
+status: Aceptado
+date: 2026-06-26
 decision-makers: Equipo de Desarrollo
 ```
 
@@ -64,3 +64,20 @@ Confirmar en PR 2 con modelos/tablas persistidas bajo `ml_features`, codigo de l
 `ml/features/store.py`, tests de idempotencia, lookup por fecha y ausencia de leakage
 temporal.
 
+## Confirmacion PR 2
+
+PR 2 confirma la decision con:
+
+* modelo dbt incremental `ml_features.well_monthly_features`, materializado con merge
+  idempotente por `well_id` + `as_of_date`;
+* features iniciales de produccion reciente, medias moviles, tendencia simple, meses/dias
+  disponibles y atributos estables del pozo desde gold;
+* join historico limitado a registros con `periodo <= as_of_date` para evitar leakage
+  temporal;
+* API tipada en `ml/features/store.py` con `FeatureRow`, `FeatureStore`,
+  `InMemoryFeatureRepository` y `PostgresFeatureRepository`;
+* error controlado `FeatureNotFoundError` cuando no hay features disponibles para el pozo
+  y fecha solicitados.
+
+La integracion Dagster queda para los PRs de orquestacion/retraining; este PR deja la
+materializacion disponible via dbt y el lookup Python sobre Postgres.
