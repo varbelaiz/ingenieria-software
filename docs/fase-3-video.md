@@ -69,10 +69,10 @@ uv run uvicorn app.main:app --reload
 curl -s http://localhost:8000/api/v1/models/current -H "X-API-Key: $API_KEY" | jq
 curl -s http://localhost:8000/api/v1/predictions -H "X-API-Key: $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"well_id": "POZO-001", "as_of_date": "2024-12-31", "horizon_days": 30}' | jq
+  -d '{"well_id": "135204", "as_of_date": "2024-12-31", "horizon_days": 30}' | jq
 curl -s http://localhost:8000/api/v1/predictions -H "X-API-Key: $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"well_id": "POZO-001", "as_of_date": "2024-12-31", "horizon_days": 90}' | jq
+  -d '{"well_id": "135204", "as_of_date": "2024-12-31", "horizon_days": 90}' | jq
 ```
 
 Resaltar la trazabilidad: `version`, `run_id`, `alias` y `feature_as_of_date` en la
@@ -93,6 +93,67 @@ Volver a MLflow y mostrar el run nuevo generado por el job de Dagster. Opcional:
 Resumir el valor agregado: reproducibilidad (entrenar cualquier `as_of_date`), trazabilidad
 (run -> metricas -> modelo servido) y reduccion de skew (una sola fuente de features para
 training e inferencia).
+
+## Grabar en Windows (PowerShell)
+
+Los bloques de arriba estan en bash. En Windows con PowerShell hay tres diferencias
+que rompen la grabacion si se copian tal cual:
+
+- `$API_KEY` -> `$env:API_KEY`.
+- `curl` es alias de `Invoke-WebRequest`; usar `curl.exe` con la sintaxis `-H`/`-d`.
+- No hay `jq`; pipear a `python -m json.tool` (viene con el entorno) en vez de `| jq`.
+
+### Prep en un comando
+
+```powershell
+pwsh -File scripts/video-fase3-prep.ps1
+```
+
+Requiere Docker Desktop abierto. El script crea `.env.data`, levanta ambos stacks,
+siembra bronze, corre `dbt build` hasta `ml_features`, verifica el feature store y
+**deja `API_KEY`, `WAREHOUSE_*` y `MLFLOW_*` seteadas en esa terminal**. Corre los
+pasos siguientes en la MISMA ventana (train/API leen `WAREHOUSE_PORT`, que en el
+host es 5433, no el 5432 por defecto).
+
+### Comandos de la demo (misma terminal)
+
+```powershell
+# 3. Dos entrenamientos con metricas distintas
+uv run --group ml python -m ml.training.train --as-of-date 2024-06-30
+$run = uv run --group ml python -m ml.training.train --as-of-date 2024-12-31 | ConvertFrom-Json
+
+# 4. Promocion a champion (toma el run-id del entrenamiento de arriba)
+uv run --group ml python -m ml.registry.promote --run-id $run.run_id --max-mae 100
+
+# 5. API con metadata del modelo
+uv run uvicorn app.main:app --reload   # dejar corriendo; abrir OTRA terminal prepeada para los curl
+curl.exe -s http://localhost:8000/api/v1/models/current -H "X-API-Key: $env:API_KEY" | python -m json.tool
+curl.exe -s http://localhost:8000/api/v1/predictions -H "X-API-Key: $env:API_KEY" `
+  -H "Content-Type: application/json" `
+  -d '{\"well_id\": \"135204\", \"as_of_date\": \"2024-12-31\", \"horizon_days\": 30}' | python -m json.tool
+curl.exe -s http://localhost:8000/api/v1/predictions -H "X-API-Key: $env:API_KEY" `
+  -H "Content-Type: application/json" `
+  -d '{\"well_id\": \"135204\", \"as_of_date\": \"2024-12-31\", \"horizon_days\": 90}' | python -m json.tool
+```
+
+> **Wells validos del feature store: `135204`, `200001`, `300001`** (NO `POZO-001`,
+> que es del modelo mock viejo de `/forecast` y devuelve 500 en `/predictions`).
+>
+> La segunda terminal para los `curl` tambien tiene que estar prepeada (correr el
+> script de prep ahi, o al menos setear `$env:API_KEY`). El feature store se sirve
+> desde Postgres via la API, que necesita `WAREHOUSE_PORT=5433`.
+
+### Notas para grabar
+
+- **MLflow arranca vacio.** El prep resetea MLflow, asi que el experimento y el
+  champion se crean en vivo durante la grabacion (pasos 3-4). Metricas esperadas:
+  `2024-06-30` -> MAE ~0.58 (15 filas), `2024-12-31` -> MAE ~0.56 (33 filas).
+- **Politica de promocion:** se promueve solo si el candidato *mejora* el MAE del
+  champion actual. Sobre MLflow limpio la primera promocion siempre entra. Si
+  promotes el corte `2024-06-30` (MAE 0.58) y despues `2024-12-31` (0.56), el
+  segundo tambien entra (mejora); al reves, el peor queda `rejected` (esperado).
+- Si repetis un entrenamiento ya grabado y la promocion sale `rejected`, es porque
+  el champion vigente ya es igual o mejor: reseteá con `docker compose -f docker-compose.ml.yml down -v && docker compose -f docker-compose.ml.yml up -d`.
 
 ## Capturas sugeridas
 
