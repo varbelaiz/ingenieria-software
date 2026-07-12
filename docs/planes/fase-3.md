@@ -120,7 +120,7 @@ de commits del repositorio.
 | 3 | `feature/mlflow-tracking` | tomasbenavidez | PR 1 | mergeado (#46) | MLflow local + tracking helpers |
 | 4 | `feature/prediction-api-contract` | famatodlr | PR 1 | mergeado (#47) | contrato API de prediccion y tests base |
 | 5 | `feature/training-pipeline` | famatodlr | PR 2 + PR 3 | mergeado (#48) | entrenamiento reproducible por `as_of_date` |
-| 6 | `feature/model-registry-promotion` | famatodlr | PR 3 + PR 5 | en review (#49) | registro, validacion y promocion de modelos |
+| 6 | `feature/model-registry-promotion` | famatodlr | PR 3 + PR 5 | mergeado (#49) | registro, validacion y promocion de modelos |
 | 7 | `feature/retraining-orchestration` | por asignar | PR 2 + PR 5 + PR 6 | pendiente | retrain manual/recurrente con Dagster |
 | 8 | `feature/ml-pipeline-cicd` | por asignar | PR 5 + PR 6 + PR 7 | pendiente | CI/CD de pipelines ML |
 | 9 | `feature/phase3-docs-demo` | por asignar | PR 1-8 | pendiente | README final, runbook y guion/evidencia de video |
@@ -599,11 +599,25 @@ uv run uvicorn app.main:app --reload
 
 ### Handoff
 
-* Estado: pendiente
-* Branch real:
+* Estado: listo para review
+* Branch real: `feature/model-registry-promotion`, apilada sobre PR 5
 * Comandos corridos:
-* Modelo/version promovido de ejemplo:
+  * `.venv/bin/pytest tests/test_model_registry.py tests/test_model_promotion.py tests/test_registry_inference.py tests/test_predictions.py tests/test_training_dataset.py tests/test_training_pipeline.py tests/test_feature_store.py -q`
+    mas middleware y forecast -> 40 passed
+  * Black, flake8, mypy y pylint sobre registry, inference, API y tests -> sin errores;
+    pylint 10.00/10
+  * demo real contra MLflow/Postgres pendiente por dependencias ausentes en el entorno
+* Modelo/version promovido de ejemplo: version `4`, run `run-4`, alias `champion` en
+  tests; politica validada para promoted/rejected/missing MAE
 * Endpoint verificado:
+  * `POST /api/v1/predictions` usa features point-in-time y el champion
+  * `GET /api/v1/models/current` devuelve nombre, version, run ID, alias y metricas
+  * ausencia de champion devuelve `503`
+* Decisiones:
+  * aliases `candidate`/`champion`; no se usan stages deprecados
+  * backend por defecto: registry; `ML_INFERENCE_BACKEND=baseline` conserva fallback
+    explicito para desarrollo
+  * horizontes mayores a 30 dias aplican el modelo recursivamente por mes
 * Siguiente PR desbloqueado: PR 7
 
 ---

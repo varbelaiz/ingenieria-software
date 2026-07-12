@@ -1,6 +1,8 @@
 """REST contract for Phase 3 model predictions and diagnostics."""
 
 from datetime import date
+import os
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -10,11 +12,40 @@ from ml.inference.service import (
     FeaturesNotFoundError,
     ModelMetadata,
     PredictionService,
+    RegistryPredictionService,
 )
+from ml.features.store import FeatureStore, PostgresFeatureRepository
+from ml.registry.client import MLflowRegistryClient
+from ml.registry.errors import NoPromotedModelError
 
 
 router = APIRouter(prefix="/api/v1", tags=["predictions"])
-prediction_service: PredictionService = BaselinePredictionService()
+
+
+def _warehouse_connection() -> Any:
+    """Open Postgres lazily so app startup does not require a live warehouse."""
+
+    import psycopg2  # pylint: disable=import-outside-toplevel,import-error
+
+    return psycopg2.connect(
+        host=os.getenv("WAREHOUSE_HOST", "localhost"),
+        port=int(os.getenv("WAREHOUSE_PORT", "5432")),
+        user=os.getenv("WAREHOUSE_USER", "warehouse"),
+        password=os.getenv("WAREHOUSE_PASSWORD", "warehouse"),
+        dbname=os.getenv("WAREHOUSE_DB", "warehouse"),
+    )
+
+
+def _build_prediction_service() -> PredictionService:
+    if os.getenv("ML_INFERENCE_BACKEND", "registry") == "baseline":
+        return BaselinePredictionService()
+    return RegistryPredictionService(
+        feature_store=FeatureStore(PostgresFeatureRepository(_warehouse_connection)),
+        registry=MLflowRegistryClient(),
+    )
+
+
+prediction_service: PredictionService = _build_prediction_service()
 
 
 class PredictionRequest(BaseModel):
@@ -32,6 +63,7 @@ class ModelMetadataResponse(BaseModel):
     version: str
     run_id: str | None
     alias: str
+    metrics: dict[str, float]
 
 
 class FeatureMetadataResponse(BaseModel):
@@ -57,6 +89,7 @@ def _model_response(metadata: ModelMetadata) -> ModelMetadataResponse:
         version=metadata.version,
         run_id=metadata.run_id,
         alias=metadata.alias,
+        metrics=metadata.metrics,
     )
 
 
@@ -72,6 +105,8 @@ def create_prediction(request: PredictionRequest) -> PredictionResponse:
         )
     except FeaturesNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except NoPromotedModelError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
     return PredictionResponse(
         well_id=request.well_id,
@@ -87,4 +122,7 @@ def create_prediction(request: PredictionRequest) -> PredictionResponse:
 def get_current_model() -> ModelMetadataResponse:
     """Describe the model currently serving prediction requests."""
 
-    return _model_response(prediction_service.current_model())
+    try:
+        return _model_response(prediction_service.current_model())
+    except NoPromotedModelError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error

@@ -1,7 +1,7 @@
 # ADR-22: Registro y promocion de modelos
 
 ```
-status: Propuesto
+status: Aceptado
 date: 2026-06-25
 decision-makers: Equipo de Desarrollo
 ```
@@ -58,6 +58,13 @@ que MLflow ya provee.
 
 ## Confirmacion esperada
 
-Confirmar en PR 6 con helpers en `ml/registry/`, politica de promocion, tests de modelos
-promovidos/rechazados y API resolviendo el modelo vigente.
+Confirmado en PR 6 con:
 
+* `ml/registry/client.py` para registrar artefactos trazables desde un run, resolver
+  aliases y descargar el modelo vigente.
+* aliases `candidate` y `champion`, en lugar de stages de MLflow.
+* politica de promocion por MAE: el candidato debe tener la metrica, respetar el umbral
+  y mejorar al champion actual.
+* CLI `python -m ml.registry.promote --run-id <RUN_ID> --max-mae <VALOR>`.
+* inferencia por API usando features point-in-time y el modelo `champion`, con respuesta
+  `503` explicita cuando no existe uno promovido.
